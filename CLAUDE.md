@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-Pioneer Team Backend — a Python FastAPI application.
+Alpha Desk — a Python FastAPI application.
 
 ## Commands
 
