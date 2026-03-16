@@ -1,6 +1,8 @@
 from fastapi import FastAPI
 
 from app.domains.news_search.adapter.inbound.api.news_search_router import router as news_search_router
+from app.domains.news_search.adapter.inbound.api.saved_article_router import router as saved_article_router
+from app.domains.news_search.infrastructure.orm.saved_article_orm import SavedArticleORM  # noqa: F401
 from app.domains.post.adapter.inbound.api.post_router import router as post_router
 from app.domains.post.infrastructure.orm.post_orm import PostORM  # noqa: F401
 from app.infrastructure.config.settings import Settings, get_settings
@@ -14,6 +16,7 @@ app = FastAPI(debug=settings.debug)
 
 app.include_router(post_router)
 app.include_router(news_search_router)
+app.include_router(saved_article_router)
 
 
 @app.get("/")
