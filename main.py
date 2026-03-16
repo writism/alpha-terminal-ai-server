@@ -1,5 +1,6 @@
 from fastapi import FastAPI
 
+from app.domains.news_search.adapter.inbound.api.news_search_router import router as news_search_router
 from app.domains.post.adapter.inbound.api.post_router import router as post_router
 from app.domains.post.infrastructure.orm.post_orm import PostORM  # noqa: F401
 from app.infrastructure.config.settings import Settings, get_settings
@@ -12,6 +13,7 @@ Base.metadata.create_all(bind=engine)
 app = FastAPI(debug=settings.debug)
 
 app.include_router(post_router)
+app.include_router(news_search_router)
 
 
 @app.get("/")

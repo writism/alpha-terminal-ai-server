@@ -9,6 +9,7 @@ class Settings(BaseSettings):
     mysql_host: str
     mysql_port: int
     mysql_database: str
+    serp_api_key: str = ""
     debug: bool = False
 
     model_config = {
