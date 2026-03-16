@@ -11,7 +11,7 @@ from app.infrastructure.database.session import get_db
 router = APIRouter(prefix="/news", tags=["news"])
 
 
-@router.post("/articles", response_model=SaveArticleResponse, status_code=201)
+@router.post("/saved", response_model=SaveArticleResponse, status_code=201)
 async def save_article(request: SaveArticleRequest, db: Session = Depends(get_db)):
     repository = SavedArticleRepositoryImpl(db)
     content_fetcher = ArticleContentAdapter()

@@ -1,3 +1,4 @@
+from hashlib import sha256
 from typing import Optional
 
 from sqlalchemy.orm import Session
@@ -20,7 +21,8 @@ class SavedArticleRepositoryImpl(SavedArticleRepositoryPort):
         return SavedArticleMapper.to_entity(orm)
 
     def find_by_link(self, link: str) -> Optional[SavedArticle]:
-        orm = self._db.query(SavedArticleORM).filter(SavedArticleORM.link == link).first()
+        link_hash = sha256(link.encode()).hexdigest()
+        orm = self._db.query(SavedArticleORM).filter(SavedArticleORM.link_hash == link_hash).first()
         if orm is None:
             return None
         return SavedArticleMapper.to_entity(orm)
