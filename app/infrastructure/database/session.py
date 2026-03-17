@@ -1,3 +1,5 @@
+from urllib.parse import quote_plus
+
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, DeclarativeBase
 
@@ -6,7 +8,7 @@ from app.infrastructure.config.settings import get_settings
 settings = get_settings()
 
 DATABASE_URL = (
-    f"mysql+pymysql://{settings.mysql_user}:{settings.mysql_password}"
+    f"mysql+pymysql://{settings.mysql_user}:{quote_plus(settings.mysql_password)}"
     f"@{settings.mysql_host}:{settings.mysql_port}/{settings.mysql_database}"
 )
 
