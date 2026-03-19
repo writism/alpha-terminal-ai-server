@@ -74,6 +74,12 @@ async def run_pipeline(db: Session = Depends(get_db)):
         best_analysis = None
         for raw in raw_articles[:3]:  # 최대 3건만 분석 (비용 절약)
             try:
+                from datetime import datetime as dt
+                try:
+                    published_at = dt.fromisoformat(str(raw.published_at))
+                except Exception:
+                    published_at = dt.now()
+
                 # R2 정규화
                 normalized = await normalizer_usecase.execute(NormalizeRawArticleRequest(
                     id=str(raw.id),
@@ -81,7 +87,7 @@ async def run_pipeline(db: Session = Depends(get_db)):
                     source_name=raw.source_name,
                     title=raw.title,
                     body_text=raw.body_text or raw.title,
-                    published_at=raw.published_at,
+                    published_at=published_at,
                     symbol=raw.symbol,
                     lang=raw.lang or "en",
                 ))
