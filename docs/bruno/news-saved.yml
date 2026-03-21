@@ -1,0 +1,26 @@
+info:
+  name: news/saved
+  type: http
+  seq: 2
+
+http:
+  method: POST
+  url: http://localhost:33333/news/saved
+  body:
+    type: json
+    data: |2
+      
+          {
+            "title": "Google Translate rolls out new homescreen widgets on Android",
+            "snippet": "",
+            "source": "9to5Google",
+            "published_at": "03/16/2026, 02:30 PM, +0000 UTC",
+            "link": "https://9to5google.com/2026/03/16/google-translate-new-widgets/"
+          }
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

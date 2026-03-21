@@ -1,0 +1,62 @@
+{
+  "info": {
+    "name": "alpha-desk",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "news/search",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "http://localhost:33333/news/search?keyword=google&page=1&size=10",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "33333",
+          "path": ["news", "search"],
+          "query": [
+            { "key": "keyword", "value": "google" },
+            { "key": "page", "value": "1" },
+            { "key": "size", "value": "10" }
+          ]
+        }
+      }
+    },
+    {
+      "name": "news/saved",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"title\": \"Google Translate rolls out new homescreen widgets on Android\",\n  \"snippet\": \"\",\n  \"source\": \"9to5Google\",\n  \"published_at\": \"03/16/2026, 02:30 PM, +0000 UTC\",\n  \"link\": \"https://9to5google.com/2026/03/16/google-translate-new-widgets/\"\n}",
+          "options": { "raw": { "language": "json" } }
+        },
+        "url": {
+          "raw": "http://localhost:33333/news/saved",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "33333",
+          "path": ["news", "saved"]
+        }
+      }
+    },
+    {
+      "name": "news/saved/{article_id}/analysis",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "http://localhost:33333/news/saved/1/analysis",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "33333",
+          "path": ["news", "saved", "1", "analysis"]
+        }
+      }
+    }
+  ]
+}

@@ -1,6 +1,9 @@
+import logging
 import uuid
 
 from app.domains.account.application.usecase.account_repository_port import AccountRepositoryPort
+
+logger = logging.getLogger(__name__)
 from app.domains.kakao_auth.application.response.kakao_account_check_response import KakaoAccountCheckResponse
 from app.domains.kakao_auth.application.usecase.kakao_user_info_port import KakaoUserInfoPort
 from app.domains.kakao_auth.application.usecase.request_kakao_access_token_port import RequestKakaoAccessTokenPort
@@ -38,7 +41,7 @@ class CheckKakaoAccountRegistrationUseCase:
         temp_token = str(uuid.uuid4())
         self._temp_token_store.save(temp_token, kakao_token.access_token)
 
-        print(f"[TempToken] issued=True prefix={temp_token[:8]}...")
+        logger.debug(f"[TempToken] issued=True prefix={temp_token[:8]}...")
 
         return KakaoAccountCheckResponse(
             is_registered=False,
