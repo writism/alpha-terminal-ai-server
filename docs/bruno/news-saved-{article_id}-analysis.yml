@@ -1,0 +1,15 @@
+info:
+  name: news/saved/{article_id}/analysis
+  type: http
+  seq: 3
+
+http:
+  method: GET
+  url: http://localhost:33333/news/saved/1/analysis
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
