@@ -22,6 +22,7 @@ class Settings(BaseSettings):
     openai_api_key: str = ""
     openai_model: str = "gpt-4.1-mini"
     cors_allowed_frontend_url: str = "http://localhost:3000"
+    frontend_auth_callback_url: str = "http://localhost:3000/auth-callback"
     debug: bool = False
 
     model_config = {
