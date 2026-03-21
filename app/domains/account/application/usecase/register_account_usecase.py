@@ -1,3 +1,5 @@
+import logging
+
 from app.domains.account.application.request.register_account_request import RegisterAccountRequest
 from app.domains.account.application.response.register_account_response import RegisterAccountResponse
 from app.domains.account.application.usecase.account_repository_port import AccountRepositoryPort
@@ -5,6 +7,8 @@ from app.domains.account.application.usecase.account_session_store_port import A
 from app.domains.account.application.usecase.kakao_token_store_port import KakaoTokenStorePort
 from app.domains.account.application.usecase.temp_token_port import TempTokenPort
 from app.domains.account.domain.entity.account import Account
+
+logger = logging.getLogger(__name__)
 
 
 class RegisterAccountUseCase:
@@ -36,7 +40,7 @@ class RegisterAccountUseCase:
 
         session_token = self._session_store.create_session(account.id)
 
-        print(f"[Register] account_id={account.id} email={account.email} session_prefix={session_token[:8]}...")
+        logger.debug(f"[Register] account_id={account.id} email={account.email} session_prefix={session_token[:8]}...")
 
         return RegisterAccountResponse(
             account_id=account.id,
