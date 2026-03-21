@@ -13,5 +13,6 @@ class KakaoAccountCheckResponse(BaseModel):
 
     # 내부 전달용 — 라우터에서 쿠키 세팅 후 응답 직렬화 시 제외
     temp_token: Optional[str] = None
+    user_token: Optional[str] = None
 
     model_config = {"json_schema_extra": {"exclude": {"temp_token"}}}

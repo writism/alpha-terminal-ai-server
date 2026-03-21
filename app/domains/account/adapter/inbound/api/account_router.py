@@ -1,3 +1,5 @@
+from urllib.parse import quote
+
 from fastapi import APIRouter, Cookie, Depends, HTTPException
 from fastapi.responses import RedirectResponse
 from sqlalchemy.orm import Session
@@ -40,10 +42,10 @@ async def register_account(
         )
         result = usecase.execute(temp_token, request)
 
-        response = RedirectResponse(url=_settings.cors_allowed_frontend_url, status_code=302)
+        response = RedirectResponse(url=_settings.frontend_auth_callback_url, status_code=302)
         response.set_cookie(key="session_token", value=result.session_token, httponly=True, max_age=3600 * 24 * 7, samesite="lax")
-        response.set_cookie(key="nickname", value=result.nickname, max_age=3600 * 24 * 7, samesite="lax")
-        response.set_cookie(key="email", value=result.email, max_age=3600 * 24 * 7, samesite="lax")
+        response.set_cookie(key="nickname", value=quote(result.nickname), max_age=3600 * 24 * 7, samesite="lax")
+        response.set_cookie(key="email", value=quote(result.email), max_age=3600 * 24 * 7, samesite="lax")
         response.delete_cookie("temp_token")
 
         return response
