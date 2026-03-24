@@ -15,9 +15,13 @@ class StockRepositoryImpl(StockRepositoryPort):
         self._db = db
 
     def search_by_name(self, keyword: str, limit: int = 20) -> List[Stock]:
+        from sqlalchemy import or_
         orms = (
             self._db.query(StockORM)
-            .filter(StockORM.name.like(f"%{keyword}%"))
+            .filter(or_(
+                StockORM.name.like(f"%{keyword}%"),
+                StockORM.symbol.like(f"%{keyword}%"),
+            ))
             .limit(limit)
             .all()
         )
