@@ -44,7 +44,7 @@ async def run_pipeline(
         analysis_usecase=GetOrCreateAnalysisUseCase(
             article_repository=normalized_article_repository,
             analysis_repository=_analysis_repository,
-            analyzer_port=OpenAIAnalyzerAdapter(api_key=_settings.openai_api_key),
+            analyzer_port=OpenAIAnalyzerAdapter(api_key=_settings.openai_api_key, model=_settings.openai_model),
         ),
     )
     selected_symbols = request.symbols if request and request.symbols else None

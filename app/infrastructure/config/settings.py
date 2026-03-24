@@ -20,6 +20,7 @@ class Settings(BaseSettings):
     serp_api_key: str = ""
     dart_api_key: str = ""
     openai_api_key: str = ""
+    openai_model: str = "gpt-3.5-turbo"
     finnhub_api_key: str = ""
     cors_allowed_frontend_url: str = "http://localhost:3000"
     frontend_auth_callback_url: str = "http://localhost:3000/auth-callback"

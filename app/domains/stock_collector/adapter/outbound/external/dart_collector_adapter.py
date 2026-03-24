@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timedelta
 from hashlib import sha256
 from typing import List
 
@@ -18,7 +18,8 @@ class DartCollectorAdapter(CollectorPort):
         params = {
             "crtfc_key": settings.dart_api_key,
             "corp_code": self._get_corp_code(symbol),
-            "bgn_de": datetime.now().strftime("%Y%m%d"),
+            "bgn_de": (datetime.now() - timedelta(days=30)).strftime("%Y%m%d"),
+            "end_de": datetime.now().strftime("%Y%m%d"),
             "page_no": "1",
             "page_count": "10",
         }
