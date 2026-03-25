@@ -7,11 +7,12 @@
 - **PR:** https://github.com/writism/alpha-desk-ai-server/pull/6  
 - **브랜치:** `feat/bl-be-04-17-backlog-heatmap-pipeline`
 
-## 커밋 (3개)
+## 커밋 (4개)
 
 1. `docs(back): backlog BL-BE-04 through BL-BE-17`
 2. `feat(stock): daily returns heatmap API and market data adapters`
 3. `feat: pipeline analysis logs, per-user watchlist, auth flow`
+4. `docs(meta): session record for 2026-03-25 PR bundle`
 
 ## 프론트 연동 PR
 
