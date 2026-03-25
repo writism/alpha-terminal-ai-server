@@ -69,3 +69,30 @@ async def get_board_list(
     account_repository = AccountRepositoryImpl(db)
     usecase = GetBoardListUseCase(board_repository, account_repository)
     return usecase.execute(page=page, size=size)
+
+
+@router.get("/{board_id}", response_model=BoardListItemResponse)
+async def get_board(
+    board_id: int,
+    account_id: Optional[str] = Cookie(default=None),
+    db: Session = Depends(get_db),
+):
+    if not account_id:
+        raise HTTPException(status_code=401, detail="로그인이 필요합니다.")
+
+    board_repository = BoardRepositoryImpl(db)
+    board = board_repository.find_by_id(board_id)
+    if not board:
+        raise HTTPException(status_code=404, detail="게시물을 찾을 수 없습니다.")
+
+    account_repository = AccountRepositoryImpl(db)
+    account = account_repository.find_by_id(board.account_id)
+
+    return BoardListItemResponse(
+        board_id=board.id,
+        title=board.title,
+        content=board.content,
+        nickname=account.nickname if account else "알 수 없음",
+        created_at=board.created_at,
+        updated_at=board.updated_at,
+    )

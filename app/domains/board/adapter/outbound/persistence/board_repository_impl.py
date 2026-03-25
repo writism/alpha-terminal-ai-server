@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, Optional
 
 from sqlalchemy.orm import Session
 
@@ -18,6 +18,10 @@ class BoardRepositoryImpl(BoardRepositoryPort):
         self._db.commit()
         self._db.refresh(orm)
         return BoardMapper.to_entity(orm)
+
+    def find_by_id(self, board_id: int) -> Optional[Board]:
+        orm = self._db.query(BoardORM).filter(BoardORM.id == board_id).first()
+        return BoardMapper.to_entity(orm) if orm else None
 
     def find_paginated(self, page: int, size: int) -> List[Board]:
         offset = (page - 1) * size
