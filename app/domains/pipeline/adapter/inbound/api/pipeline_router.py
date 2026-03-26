@@ -47,6 +47,7 @@ def _log_to_summary(log) -> StockSummaryResponse:
         confidence=log.confidence,
         source_type=log.source_type,
         url=getattr(log, "url", None),
+        analyzed_at=getattr(log, "analyzed_at", None),
     )
 
 

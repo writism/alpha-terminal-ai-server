@@ -25,6 +25,10 @@ from app.domains.stock_collector.infrastructure.orm.raw_article_orm import RawAr
 from app.domains.stock_normalizer.adapter.inbound.api.normalizer_router import router as normalizer_router
 from app.domains.watchlist.adapter.inbound.api.watchlist_router import router as watchlist_router
 from app.domains.watchlist.infrastructure.orm.watchlist_item_orm import WatchlistItemORM  # noqa: F401
+from app.domains.card_share.adapter.inbound.api.card_share_router import router as card_share_router
+from app.domains.card_share.infrastructure.orm.shared_card_orm import SharedCardORM  # noqa: F401
+from app.domains.card_share.infrastructure.orm.card_like_orm import CardLikeORM  # noqa: F401
+from app.domains.card_share.infrastructure.orm.card_comment_orm import CardCommentORM  # noqa: F401
 from app.infrastructure.config.settings import Settings, get_settings
 from app.infrastructure.database.session import Base, engine
 from app.infrastructure.scheduler.pipeline_scheduler import start_scheduler, stop_scheduler
@@ -66,6 +70,7 @@ app.include_router(normalizer_router)
 app.include_router(stock_router)
 app.include_router(analyzer_router)
 app.include_router(pipeline_router)
+app.include_router(card_share_router)
 
 
 @app.get("/")
