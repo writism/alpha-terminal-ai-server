@@ -1,6 +1,6 @@
 from typing import Optional
 
-from sqlalchemy import text
+from sqlalchemy import func, text
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
@@ -100,7 +100,7 @@ class CardShareRepositoryImpl:
             return False
         self._db.delete(orm)
         self._db.query(SharedCardORM).filter(SharedCardORM.id == card_id).update(
-            {"like_count": SharedCardORM.like_count - 1}
+            {"like_count": func.greatest(SharedCardORM.like_count - 1, 0)}
         )
         self._db.commit()
         return True
