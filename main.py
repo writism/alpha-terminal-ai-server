@@ -31,6 +31,8 @@ from app.domains.market_video.adapter.inbound.api.market_video_collect_router im
 from app.domains.market_video.adapter.inbound.api.video_comment_router import router as video_comment_router
 from app.domains.market_video.adapter.inbound.api.noun_extraction_router import router as noun_extraction_router
 from app.domains.market_video.infrastructure.orm.market_video_orm import MarketVideoORM  # noqa: F401
+from app.domains.youtube.infrastructure.orm.youtube_video_orm import YouTubeVideoORM  # noqa: F401
+from app.domains.youtube.infrastructure.orm.youtube_comment_orm import YouTubeCommentORM  # noqa: F401
 from app.domains.card_share.infrastructure.orm.shared_card_orm import SharedCardORM  # noqa: F401
 from app.domains.card_share.infrastructure.orm.card_like_orm import CardLikeORM  # noqa: F401
 from app.domains.card_share.infrastructure.orm.card_comment_orm import CardCommentORM  # noqa: F401
