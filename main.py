@@ -26,6 +26,11 @@ from app.domains.stock_normalizer.adapter.inbound.api.normalizer_router import r
 from app.domains.watchlist.adapter.inbound.api.watchlist_router import router as watchlist_router
 from app.domains.watchlist.infrastructure.orm.watchlist_item_orm import WatchlistItemORM  # noqa: F401
 from app.domains.card_share.adapter.inbound.api.card_share_router import router as card_share_router
+from app.domains.market_video.adapter.inbound.api.youtube_router import router as youtube_router
+from app.domains.market_video.adapter.inbound.api.market_video_collect_router import router as market_video_collect_router
+from app.domains.market_video.adapter.inbound.api.video_comment_router import router as video_comment_router
+from app.domains.market_video.adapter.inbound.api.noun_extraction_router import router as noun_extraction_router
+from app.domains.market_video.infrastructure.orm.market_video_orm import MarketVideoORM  # noqa: F401
 from app.domains.card_share.infrastructure.orm.shared_card_orm import SharedCardORM  # noqa: F401
 from app.domains.card_share.infrastructure.orm.card_like_orm import CardLikeORM  # noqa: F401
 from app.domains.card_share.infrastructure.orm.card_comment_orm import CardCommentORM  # noqa: F401
@@ -71,6 +76,10 @@ app.include_router(stock_router)
 app.include_router(analyzer_router)
 app.include_router(pipeline_router)
 app.include_router(card_share_router)
+app.include_router(youtube_router)
+app.include_router(market_video_collect_router)
+app.include_router(video_comment_router)
+app.include_router(noun_extraction_router)
 
 
 @app.get("/")

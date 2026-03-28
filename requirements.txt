@@ -8,3 +8,4 @@ openai>=1.0.0
 redis>=5.0.0
 apscheduler>=3.10.0
 tweepy>=4.14.0
+kiwipiepy>=0.17.0
