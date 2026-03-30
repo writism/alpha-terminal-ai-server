@@ -4,6 +4,7 @@ from fastapi import APIRouter, Cookie, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
 from app.domains.auth.adapter.outbound.in_memory.redis_session_adapter import RedisSessionAdapter
+from app.domains.market_video.adapter.outbound.external.youtube_search_adapter import YoutubeSearchAdapter
 from app.domains.market_video.adapter.outbound.persistence.market_video_repository_impl import (
     MarketVideoRepositoryImpl,
 )
@@ -31,5 +32,8 @@ async def get_youtube_video_list(
     if session is None:
         raise HTTPException(status_code=401, detail="유효하지 않거나 만료된 세션입니다.")
 
-    usecase = GetYoutubeVideoListUseCase(MarketVideoRepositoryImpl(db))
+    usecase = GetYoutubeVideoListUseCase(
+        repository=MarketVideoRepositoryImpl(db),
+        youtube_search=YoutubeSearchAdapter(),
+    )
     return usecase.execute(page_token, stock_name)

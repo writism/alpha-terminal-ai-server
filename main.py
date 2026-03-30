@@ -38,6 +38,8 @@ from app.domains.youtube.infrastructure.orm.youtube_comment_orm import YouTubeCo
 from app.domains.card_share.infrastructure.orm.shared_card_orm import SharedCardORM  # noqa: F401
 from app.domains.card_share.infrastructure.orm.card_like_orm import CardLikeORM  # noqa: F401
 from app.domains.card_share.infrastructure.orm.card_comment_orm import CardCommentORM  # noqa: F401
+from app.domains.stock_theme.adapter.inbound.api.stock_theme_router import router as stock_theme_router
+from app.domains.stock_theme.infrastructure.orm.stock_theme_orm import StockThemeORM  # noqa: F401
 from app.infrastructure.config.settings import Settings, get_settings
 from app.infrastructure.database.session import Base, engine
 from app.infrastructure.scheduler.pipeline_scheduler import start_scheduler, stop_scheduler
@@ -104,6 +106,7 @@ app.include_router(market_video_collect_router)
 app.include_router(video_comment_router)
 app.include_router(noun_extraction_router)
 app.include_router(market_video_router)
+app.include_router(stock_theme_router)
 
 
 @app.get("/")
