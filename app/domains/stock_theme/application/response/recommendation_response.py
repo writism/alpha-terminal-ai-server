@@ -6,6 +6,7 @@ class RecommendationItem(BaseModel):
     code: str
     matched_keywords: list[str]
     relevance_score: float
+    recommendation_reason: str = ""
 
 
 class RecommendationResponse(BaseModel):

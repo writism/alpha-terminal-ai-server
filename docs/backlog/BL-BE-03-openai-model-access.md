@@ -30,3 +30,6 @@ Project proj_uvwhqbcL3BkYjQuXQngaCTZp does not have access to model gpt-4o-mini
 2. 사용 가능한 모델로 `openai_analyzer_adapter.py`의 모델명을 변경한다
 3. 모델명을 하드코딩 대신 `settings.py`의 환경변수(`openai_model`)로 분리한다
 4. 파이프라인 재실행 후 000660 분석 결과를 검증한다
+
+**관련 백로그**
+- [BL-BE-50](BL-BE-50-llm-responses-infrastructure.md) — Responses API 전용 LLM 인프라 (`openai_responses_model`).

@@ -21,3 +21,6 @@
 - [x] 추천 결과를 관련성 점수 기준으로 정렬하여 반환한다
 - [x] 추천 결과 Response DTO를 정의한다
 - [x] 추천 데이터 생성 API 엔드포인트를 정의하고 라우터에 등록한다
+
+**관련 백로그**
+- [BL-BE-51](BL-BE-51-recommendation-reason-llm.md) — 종목별 추천 이유 문장(LLM)
