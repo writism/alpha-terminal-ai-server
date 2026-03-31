@@ -40,6 +40,7 @@ from app.domains.card_share.infrastructure.orm.card_like_orm import CardLikeORM 
 from app.domains.card_share.infrastructure.orm.card_comment_orm import CardCommentORM  # noqa: F401
 from app.domains.stock_theme.adapter.inbound.api.stock_theme_router import router as stock_theme_router
 from app.domains.stock_theme.infrastructure.orm.stock_theme_orm import StockThemeORM  # noqa: F401
+from app.domains.market_analysis.adapter.inbound.api.market_analysis_router import router as market_analysis_router
 from app.infrastructure.config.settings import Settings, get_settings
 from app.infrastructure.database.session import Base, engine
 from app.infrastructure.scheduler.pipeline_scheduler import start_scheduler, stop_scheduler
@@ -107,6 +108,7 @@ app.include_router(video_comment_router)
 app.include_router(noun_extraction_router)
 app.include_router(market_video_router)
 app.include_router(stock_theme_router)
+app.include_router(market_analysis_router)
 
 
 @app.get("/")
