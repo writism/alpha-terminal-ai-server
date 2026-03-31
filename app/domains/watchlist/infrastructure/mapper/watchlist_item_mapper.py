@@ -1,3 +1,5 @@
+from datetime import datetime, timezone
+
 from app.domains.watchlist.domain.entity.watchlist_item import WatchlistItem
 from app.domains.watchlist.infrastructure.orm.watchlist_item_orm import WatchlistItemORM
 
@@ -5,13 +7,16 @@ from app.domains.watchlist.infrastructure.orm.watchlist_item_orm import Watchlis
 class WatchlistItemMapper:
     @staticmethod
     def to_entity(orm: WatchlistItemORM) -> WatchlistItem:
+        created = orm.created_at
+        if created is None:
+            created = datetime.now(timezone.utc)
         return WatchlistItem(
             id=orm.id,
             account_id=orm.account_id,
             symbol=orm.symbol,
             name=orm.name,
             market=orm.market,
-            created_at=orm.created_at,
+            created_at=created,
         )
 
     @staticmethod
