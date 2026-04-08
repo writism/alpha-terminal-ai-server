@@ -58,6 +58,7 @@ jobs:
             --name alphadesk-api \
             -p 33333:33333 \
             --env-file /home/ec2-user/alpha-terminal-ai-server/.env \
+            --network alphadesk-network \
             --restart unless-stopped \
             ghcr.io/${{ secrets.REPO_USER }}/alpha-terminal-api:latest
 
