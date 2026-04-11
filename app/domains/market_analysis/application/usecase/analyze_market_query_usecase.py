@@ -1,5 +1,6 @@
 from app.domains.market_analysis.application.usecase.langchain_qa_port import LangChainQAPort
 from app.domains.market_analysis.application.usecase.market_data_repository_port import MarketDataRepositoryPort
+from app.domains.market_analysis.application.usecase.user_profile_repository_port import UserProfileRepositoryPort
 from app.domains.market_analysis.domain.entity.analysis_answer import AnalysisAnswer
 from app.domains.market_analysis.domain.service.context_builder_service import (
     ContextBuilderService,
@@ -8,9 +9,15 @@ from app.domains.market_analysis.domain.service.context_builder_service import (
 
 
 class AnalyzeMarketQueryUseCase:
-    def __init__(self, repository: MarketDataRepositoryPort, qa: LangChainQAPort):
+    def __init__(
+        self,
+        repository: MarketDataRepositoryPort,
+        qa: LangChainQAPort,
+        user_profile_repository: UserProfileRepositoryPort | None = None,
+    ):
         self._repository = repository
         self._qa = qa
+        self._user_profile_repository = user_profile_repository
         self._context_builder = ContextBuilderService()
 
     def execute(self, account_id: int, question: str) -> AnalysisAnswer:
@@ -33,5 +40,10 @@ class AnalyzeMarketQueryUseCase:
             )
             for s in watchlist
         ]
-        context = self._context_builder.build(contexts)
+
+        user_profile = None
+        if self._user_profile_repository:
+            user_profile = self._user_profile_repository.get_by_account_id(account_id)
+
+        context = self._context_builder.build(contexts, user_profile=user_profile)
         return self._qa.ask(question, context)

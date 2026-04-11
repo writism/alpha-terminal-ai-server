@@ -13,6 +13,9 @@ from app.domains.market_analysis.application.response.analysis_response import A
 from app.domains.market_analysis.application.usecase.analyze_market_query_usecase import (
     AnalyzeMarketQueryUseCase,
 )
+from app.domains.user_profile.adapter.outbound.persistence.mock_user_profile_repository import (
+    MockUserProfileRepository,
+)
 from app.infrastructure.cache.redis_client import redis_client
 from app.infrastructure.config.settings import get_settings
 from app.infrastructure.database.session import get_db
@@ -56,6 +59,12 @@ async def ask_market_analysis(
     settings = get_settings()
     repository = MarketDataRepositoryImpl(db)
     qa = LangChainQAAdapter(api_key=settings.openai_api_key, model=settings.openai_model)
-    usecase = AnalyzeMarketQueryUseCase(repository, qa)
+    user_profile_repository = MockUserProfileRepository()
+    usecase = AnalyzeMarketQueryUseCase(repository, qa, user_profile_repository)
     answer = usecase.execute(account_id=aid, question=request.question)
-    return AnalysisAnswerResponse(question=request.question, answer=answer.answer, in_scope=answer.in_scope)
+    return AnalysisAnswerResponse(
+        question=request.question,
+        answer=answer.answer,
+        in_scope=answer.in_scope,
+        is_personalized=answer.is_personalized,
+    )
