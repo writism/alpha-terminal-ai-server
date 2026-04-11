@@ -43,11 +43,13 @@ from app.domains.stock_theme.infrastructure.orm.stock_theme_orm import StockThem
 from app.domains.market_analysis.adapter.inbound.api.market_analysis_router import router as market_analysis_router
 from app.infrastructure.config.settings import Settings, get_settings
 from app.infrastructure.database.session import Base, engine
+from app.infrastructure.database.pg_session import PgBase, pg_engine, check_pg_health
 from app.infrastructure.scheduler.pipeline_scheduler import start_scheduler, stop_scheduler
 
 settings: Settings = get_settings()
 
 Base.metadata.create_all(bind=engine)
+PgBase.metadata.create_all(bind=pg_engine)
 
 
 def _run_column_migrations():
@@ -70,6 +72,7 @@ _run_column_migrations()
 
 @asynccontextmanager
 async def lifespan(fastapi_app: FastAPI):
+    check_pg_health()
     from app.domains.pipeline.adapter.inbound.api.pipeline_router import run_pipeline_job
     start_scheduler(run_pipeline_job)
     yield
