@@ -1,5 +1,6 @@
 import logging
-from datetime import date
+from datetime import datetime
+from zoneinfo import ZoneInfo
 
 from app.domains.user_profile.application.port.user_profile_repository_port import UserProfileRepositoryPort
 from app.domains.user_profile.domain.entity.user_interaction import InteractionType
@@ -22,7 +23,7 @@ class UpdateAllUserProfilesUseCase:
 
     def execute(self) -> int:
         """전체 사용자 프로필 업데이트. 갱신된 사용자 수 반환."""
-        today = date.today()
+        today = datetime.now(ZoneInfo("Asia/Seoul")).date()
         account_ids = self._repo.find_all_account_ids()
         updated = 0
 
