@@ -55,6 +55,7 @@ from app.domains.notification.infrastructure.orm.notification_orm import Notific
 from app.domains.investment.infrastructure.orm.investment_youtube_log_orm import InvestmentYouTubeLogORM  # noqa: F401
 from app.domains.investment.infrastructure.orm.investment_youtube_video_orm import InvestmentYouTubeVideoORM  # noqa: F401
 from app.domains.investment.infrastructure.orm.investment_youtube_comment_orm import InvestmentYouTubeCommentORM  # noqa: F401
+from app.domains.investment.infrastructure.orm.analysis_cache_orm import AnalysisCacheORM  # noqa: F401
 from app.infrastructure.config.settings import Settings, get_settings
 from app.infrastructure.database.session import Base, engine
 from app.infrastructure.database.pg_session import PgBase, pg_engine, check_pg_health

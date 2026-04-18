@@ -114,6 +114,66 @@ async def _handle_youtube(keyword: str, query: str, company: Optional[str]) -> s
         return "=== YouTube 수집 실패 ===", None
 
 
+async def _handle_dashboard_analysis(keyword: str, company: Optional[str] = None) -> SourceResult:
+    """[Retrieval][대시보드 분석] analysis_logs 테이블에서 최근 48시간 내 종목 분석 결과를 조회한다."""
+    from datetime import datetime, timedelta
+    from app.domains.stock.infrastructure.orm.stock_orm import StockORM
+    from app.domains.pipeline.infrastructure.orm.analysis_log_orm import AnalysisLogORM
+    from app.infrastructure.database.session import SessionLocal
+
+    search_name = company or keyword
+    await aemit(f"[Retrieval][대시보드 분석] ▶ 시작 | keyword={search_name}")
+
+    loop = asyncio.get_event_loop()
+
+    def _query_logs():
+        db = SessionLocal()
+        try:
+            # company명으로 symbol 조회
+            stock_orm = db.query(StockORM).filter(StockORM.name == search_name).first()
+            if not stock_orm:
+                stock_orm = db.query(StockORM).filter(StockORM.name.like(f"%{search_name}%")).first()
+
+            if not stock_orm:
+                return None, search_name
+
+            cutoff = datetime.now() - timedelta(hours=48)
+            logs = (
+                db.query(AnalysisLogORM)
+                .filter(
+                    AnalysisLogORM.symbol == stock_orm.symbol,
+                    AnalysisLogORM.analyzed_at >= cutoff,
+                )
+                .order_by(AnalysisLogORM.analyzed_at.desc())
+                .limit(5)
+                .all()
+            )
+            return logs, stock_orm.name
+        finally:
+            db.close()
+
+    logs, stock_name = await loop.run_in_executor(None, _query_logs)
+
+    if logs is None:
+        await aemit(f"[Retrieval][대시보드 분석] ⚠ 종목 미등록: {search_name}")
+        return "", None
+
+    if not logs:
+        await aemit(f"[Retrieval][대시보드 분석] ⚠ 최근 48h 분석 기록 없음: {stock_name}")
+        return "", None
+
+    lines = [f"=== 대시보드 AI 분석 기록: {stock_name} (최근 48시간, {len(logs)}건) ==="]
+    for log in logs:
+        lines.append(f"\n[{log.analyzed_at.strftime('%Y-%m-%d %H:%M')}] [{log.source_type}] {log.source_name or ''}")
+        lines.append(f"감성: {log.sentiment} (점수={log.sentiment_score:.2f}, 신뢰도={log.confidence:.2f})")
+        lines.append(f"태그: {', '.join(log.tags) if log.tags else '없음'}")
+        lines.append(f"요약: {log.summary}")
+
+    result_text = "\n".join(lines)
+    await aemit(f"[Retrieval][대시보드 분석] ◀ 완료 | {len(logs)}건 / {len(result_text)}자")
+    return result_text, None
+
+
 async def _handle_stock(keyword: str, company: Optional[str] = None) -> SourceResult:
     """[Retrieval][종목] DART 재무제표 + 공시 수집.
 
@@ -198,6 +258,7 @@ SOURCE_REGISTRY: dict[str, SourceFactory] = {
     "뉴스":         lambda kw, q, c: _handle_news(kw, c),
     "YouTube 영상": lambda kw, q, c: _handle_youtube(kw, q, c),
     "종목":         lambda kw, q, c: _handle_stock(kw, c),
+    "대시보드 분석": lambda kw, q, c: _handle_dashboard_analysis(kw, c),
 }
 
 

@@ -26,6 +26,8 @@ class AnalysisLogRepositoryImpl(AnalysisLogRepositoryPort):
                 source_type=log.source_type,
                 account_id=account_id,
                 url=getattr(log, "url", None),
+                article_published_at=getattr(log, "article_published_at", None),
+                source_name=getattr(log, "source_name", None),
             )
             self._db.add(orm)
         self._db.commit()
@@ -59,6 +61,8 @@ class AnalysisLogRepositoryImpl(AnalysisLogRepositoryPort):
                     source_type=orm.source_type or "NEWS",
                     account_id=orm.account_id,
                     url=orm.url,
+                    article_published_at=getattr(orm, "article_published_at", None),
+                    source_name=getattr(orm, "source_name", None),
                 ))
         return result
 
@@ -87,6 +91,8 @@ class AnalysisLogRepositoryImpl(AnalysisLogRepositoryPort):
                     source_type=orm.source_type or "NEWS",
                     account_id=orm.account_id,
                     url=orm.url,
+                    article_published_at=getattr(orm, "article_published_at", None),
+                    source_name=getattr(orm, "source_name", None),
                 ))
         return result
 
@@ -111,6 +117,8 @@ class AnalysisLogRepositoryImpl(AnalysisLogRepositoryPort):
                 source_type=orm.source_type or "NEWS",
                 account_id=orm.account_id,
                 url=orm.url,
+                article_published_at=getattr(orm, "article_published_at", None),
+                source_name=getattr(orm, "source_name", None),
             )
             for orm in orms
         ]
@@ -133,6 +141,8 @@ class AnalysisLogRepositoryImpl(AnalysisLogRepositoryPort):
                 source_type=orm.source_type or "NEWS",
                 account_id=orm.account_id,
                 url=orm.url,
+                article_published_at=getattr(orm, "article_published_at", None),
+                source_name=getattr(orm, "source_name", None),
             )
             for orm in orms
         ]

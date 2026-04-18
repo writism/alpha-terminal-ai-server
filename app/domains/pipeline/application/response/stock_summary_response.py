@@ -15,3 +15,5 @@ class StockSummaryResponse(BaseModel):
     source_type: str = "NEWS"  # NEWS | DISCLOSURE | REPORT
     url: Optional[str] = None
     analyzed_at: Optional[datetime] = None
+    article_published_at: Optional[datetime] = None
+    source_name: Optional[str] = None

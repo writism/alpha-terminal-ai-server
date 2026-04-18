@@ -27,10 +27,11 @@ SOURCE_REGISTRY: dict[str, str] = {
     "뉴스": "SERP API 구글 뉴스 검색 — 최신 기사·공시·시황",
     "YouTube 영상": "YouTube Data API 채널 영상 검색 — 증권 채널 영상 및 댓글",
     "종목": "관심종목 기본 정보 — 시세·재무 요약 (향후 구현)",
+    "대시보드 분석": "대시보드 파이프라인이 기 수행한 종목별 AI 분석 요약 — 재분석 없이 컨텍스트 활용",
 }
 
 # fallback: 파싱 실패 또는 유효 키가 없을 때 기본 수집 소스 (전체 소스)
-DEFAULT_SOURCES: List[str] = ["뉴스", "YouTube 영상", "종목"]
+DEFAULT_SOURCES: List[str] = ["뉴스", "YouTube 영상", "종목", "대시보드 분석"]
 
 _VALID_KEYS = set(SOURCE_REGISTRY.keys())
 
@@ -67,7 +68,8 @@ _SYSTEM = f"""당신은 투자 질문 분석기입니다.
    - 최신 뉴스·공시·시황이 필요하면 → "뉴스" 포함
    - 유튜브 증권 채널 해설·전문가 의견이 필요하면 → "YouTube 영상" 포함
    - 종목 시세·재무 정보가 필요하면 → "종목" 포함
-   - 불확실하면 세 가지 모두 포함
+   - 특정 종목이 언급되면 → "대시보드 분석" 항상 포함 (기존 분석 컨텍스트 재활용)
+   - 불확실하면 네 가지 모두 포함
 
 응답 형식 (JSON만, 다른 텍스트 없이):
 {{
@@ -78,13 +80,13 @@ _SYSTEM = f"""당신은 투자 질문 분석기입니다.
 
 예시:
 - "한화에어로스페이스 지금 사도 될까?" →
-  {{"company": "한화에어로스페이스", "intent": "매수 타이밍 판단", "required_data": ["뉴스", "YouTube 영상", "종목"]}}
+  {{"company": "한화에어로스페이스", "intent": "매수 타이밍 판단", "required_data": ["뉴스", "YouTube 영상", "종목", "대시보드 분석"]}}
 - "방산주 전반 뉴스 알려줘" →
   {{"company": null, "intent": "섹터 뉴스 조회", "required_data": ["뉴스"]}}
 - "삼성전자 유튜브 반응은?" →
-  {{"company": "삼성전자", "intent": "유튜브 여론 조회", "required_data": ["YouTube 영상"]}}
+  {{"company": "삼성전자", "intent": "유튜브 여론 조회", "required_data": ["YouTube 영상", "대시보드 분석"]}}
 - "삼성전자 리스크 분석해줘" →
-  {{"company": "삼성전자", "intent": "리스크 분석", "required_data": ["뉴스", "YouTube 영상", "종목"]}}
+  {{"company": "삼성전자", "intent": "리스크 분석", "required_data": ["뉴스", "YouTube 영상", "종목", "대시보드 분석"]}}
 - "방산주 전반 전망 알려줘" →
   {{"company": null, "intent": "섹터 전반 분석", "required_data": ["뉴스", "YouTube 영상", "종목"]}}
 

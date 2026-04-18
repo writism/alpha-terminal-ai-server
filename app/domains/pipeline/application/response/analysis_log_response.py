@@ -16,3 +16,5 @@ class AnalysisLogResponse(BaseModel):
     source_type: str = "NEWS"
     account_id: Optional[int] = None
     url: Optional[str] = None
+    article_published_at: Optional[datetime] = None
+    source_name: Optional[str] = None

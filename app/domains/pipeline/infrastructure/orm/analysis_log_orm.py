@@ -21,3 +21,5 @@ class AnalysisLogORM(Base):
     source_type = Column(String(20), nullable=True, default="NEWS")
     account_id = Column(Integer, nullable=True)
     url = Column(String(500), nullable=True)
+    article_published_at = Column(DateTime, nullable=True)
+    source_name = Column(String(100), nullable=True)

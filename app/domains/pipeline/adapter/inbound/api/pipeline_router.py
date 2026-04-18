@@ -8,7 +8,7 @@ from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 
 from app.domains.pipeline.adapter.outbound.persistence.analysis_log_repository_impl import AnalysisLogRepositoryImpl
-from app.domains.pipeline.application.request.run_pipeline_request import RunPipelineRequest
+from app.domains.pipeline.application.request.run_pipeline_request import ArticleMode, RunPipelineRequest
 from app.domains.pipeline.application.response.analysis_log_response import AnalysisLogResponse
 from app.domains.pipeline.application.response.stock_summary_response import StockSummaryResponse
 from app.domains.pipeline.application.usecase.run_pipeline_usecase import RunPipelineUseCase
@@ -48,10 +48,13 @@ def _log_to_summary(log) -> StockSummaryResponse:
         source_type=log.source_type,
         url=getattr(log, "url", None),
         analyzed_at=getattr(log, "analyzed_at", None),
+        article_published_at=getattr(log, "article_published_at", None),
+        source_name=getattr(log, "source_name", None),
     )
 
 
 def _build_usecase(db: Session) -> RunPipelineUseCase:
+    analyzer_port = OpenAIAnalyzerAdapter(api_key=_settings.openai_api_key, model=_settings.openai_model)
     return RunPipelineUseCase(
         watchlist_repository=WatchlistRepositoryImpl(db),
         raw_article_repository=RawArticleRepositoryImpl(db),
@@ -67,8 +70,9 @@ def _build_usecase(db: Session) -> RunPipelineUseCase:
         analysis_usecase=GetOrCreateAnalysisUseCase(
             article_repository=normalized_article_repository,
             analysis_repository=_analysis_repository,
-            analyzer_port=OpenAIAnalyzerAdapter(api_key=_settings.openai_api_key, model=_settings.openai_model),
+            analyzer_port=analyzer_port,
         ),
+        analyzer_port=analyzer_port,
     )
 
 
@@ -80,7 +84,12 @@ async def run_pipeline(
 ):
     parsed_account_id = int(account_id) if account_id else None
     selected_symbols = request.symbols if request and request.symbols else None
-    result = await _build_usecase(db).execute(selected_symbols=selected_symbols, account_id=parsed_account_id)
+    article_mode = request.article_mode if request else ArticleMode.LATEST_3
+    result = await _build_usecase(db).execute(
+        selected_symbols=selected_symbols,
+        account_id=parsed_account_id,
+        article_mode=article_mode,
+    )
 
     if parsed_account_id not in _summary_registry:
         _summary_registry[parsed_account_id] = {}
@@ -104,6 +113,7 @@ async def run_pipeline_stream(
 
     parsed_account_id = int(account_id)
     selected_symbols = request.symbols if request and request.symbols else None
+    article_mode = request.article_mode if request else ArticleMode.LATEST_3
 
     async def event_generator() -> AsyncGenerator[str, None]:
         queue: asyncio.Queue[Optional[dict]] = asyncio.Queue()
@@ -117,6 +127,7 @@ async def run_pipeline_stream(
                     selected_symbols=selected_symbols,
                     account_id=parsed_account_id,
                     on_event=on_event,
+                    article_mode=article_mode,
                 )
                 if parsed_account_id not in _summary_registry:
                     _summary_registry[parsed_account_id] = {}
