@@ -7,9 +7,11 @@ from app.domains.auth.adapter.outbound.in_memory.redis_session_adapter import Re
 from app.domains.user_profile.adapter.outbound.persistence.user_profile_repository_impl import (
     UserProfileRepositoryImpl,
 )
+from app.domains.user_profile.application.request.save_clicked_card_request import SaveClickedCardRequest
 from app.domains.user_profile.application.request.save_recently_viewed_request import SaveRecentlyViewedRequest
-from app.domains.user_profile.application.response.user_profile_response import UserProfileResponse, SaveRecentlyViewedResponse
+from app.domains.user_profile.application.response.user_profile_response import UserProfileResponse, SaveRecentlyViewedResponse, SaveClickedCardResponse
 from app.domains.user_profile.application.usecase.get_user_profile_usecase import GetUserProfileUseCase
+from app.domains.user_profile.application.usecase.save_clicked_card_usecase import SaveClickedCardUseCase
 from app.domains.user_profile.application.usecase.save_recently_viewed_usecase import SaveRecentlyViewedUseCase
 from app.domains.watchlist.adapter.outbound.persistence.watchlist_repository_impl import WatchlistRepositoryImpl
 from app.infrastructure.cache.redis_client import redis_client
@@ -77,4 +79,23 @@ async def save_recently_viewed(
 
     repo = UserProfileRepositoryImpl(db)
     usecase = SaveRecentlyViewedUseCase(repository=repo)
+    return usecase.execute(account_id=user_id, request=request)
+
+
+@router.post("/{user_id}/clicked-cards", response_model=SaveClickedCardResponse)
+async def save_clicked_card(
+    user_id: int,
+    request: SaveClickedCardRequest,
+    db: Session = Depends(get_db),
+    account_id: Optional[str] = Cookie(default=None),
+    user_token: Optional[str] = Cookie(default=None),
+):
+    requester_id = _resolve_account_id(account_id, user_token)
+    if requester_id is None:
+        raise HTTPException(status_code=401, detail="로그인이 필요합니다.")
+    if requester_id != user_id:
+        raise HTTPException(status_code=403, detail="본인 이력만 저장할 수 있습니다.")
+
+    repo = UserProfileRepositoryImpl(db)
+    usecase = SaveClickedCardUseCase(repository=repo)
     return usecase.execute(account_id=user_id, request=request)

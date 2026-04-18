@@ -86,3 +86,25 @@ class UserProfileRepositoryImpl(UserProfileRepositoryPort):
             for record in records[max_count:]:
                 self._db.delete(record)
             self._db.commit()
+
+    def upsert_clicked_card(self, interaction: UserInteraction) -> UserInteraction:
+        existing = self._db.query(UserInteractionORM).filter(
+            UserInteractionORM.account_id == interaction.account_id,
+            UserInteractionORM.symbol == interaction.symbol,
+            UserInteractionORM.interaction_type == InteractionType.CLICK,
+        ).first()
+
+        if existing:
+            existing.count += 1
+            existing.name = interaction.name
+            existing.market = interaction.market
+            existing.created_at = datetime.now()
+            self._db.commit()
+            self._db.refresh(existing)
+            return UserInteractionMapper.to_entity(existing)
+
+        orm = UserInteractionMapper.to_orm(interaction)
+        self._db.add(orm)
+        self._db.commit()
+        self._db.refresh(orm)
+        return UserInteractionMapper.to_entity(orm)

@@ -39,6 +39,13 @@ class ClickedCardItem(BaseModel):
     count: int
 
 
+class SaveClickedCardResponse(BaseModel):
+    symbol: str
+    name: str
+    market: Optional[str] = None
+    count: int
+
+
 class UserProfileResponse(BaseModel):
     account_id: int
     watchlist: List[WatchlistSummaryItem] = []

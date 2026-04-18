@@ -30,3 +30,7 @@ class UserProfileRepositoryPort(ABC):
     @abstractmethod
     def enforce_max_recently_viewed(self, account_id: int, max_count: int) -> None:
         pass
+
+    @abstractmethod
+    def upsert_clicked_card(self, interaction: UserInteraction) -> UserInteraction:
+        pass
