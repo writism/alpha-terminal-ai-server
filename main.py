@@ -175,6 +175,23 @@ def _run_column_migrations():
             except Exception as e:
                 logger.warning(f"[migration] user_interactions.market 추가 실패: {e}")
 
+        # analysis_logs — article_published_at, source_name (BL-BE-75/76)
+        if not _column_exists(conn, "analysis_logs", "article_published_at"):
+            try:
+                conn.execute(text("ALTER TABLE analysis_logs ADD COLUMN article_published_at DATETIME NULL"))
+                conn.commit()
+                logger.info("[migration] analysis_logs.article_published_at 추가 완료")
+            except Exception as e:
+                logger.warning(f"[migration] analysis_logs.article_published_at 추가 실패: {e}")
+
+        if not _column_exists(conn, "analysis_logs", "source_name"):
+            try:
+                conn.execute(text("ALTER TABLE analysis_logs ADD COLUMN source_name VARCHAR(100) NULL"))
+                conn.commit()
+                logger.info("[migration] analysis_logs.source_name 추가 완료")
+            except Exception as e:
+                logger.warning(f"[migration] analysis_logs.source_name 추가 실패: {e}")
+
 
 _run_column_migrations()
 
