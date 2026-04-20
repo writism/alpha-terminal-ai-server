@@ -57,7 +57,6 @@ from app.domains.investment.infrastructure.orm.investment_youtube_video_orm impo
 from app.domains.investment.infrastructure.orm.investment_youtube_comment_orm import InvestmentYouTubeCommentORM  # noqa: F401
 from app.domains.investment.infrastructure.orm.analysis_cache_orm import AnalysisCacheORM  # noqa: F401
 from app.infrastructure.config.settings import Settings, get_settings
-from app.infrastructure.database.session import Base, engine
 from app.infrastructure.database.pg_session import PgBase, pg_engine, check_pg_health
 from app.infrastructure.scheduler.pipeline_scheduler import start_scheduler, stop_scheduler
 from app.infrastructure.scheduler.profile_update_scheduler import start_profile_scheduler, stop_profile_scheduler
@@ -66,8 +65,6 @@ from app.infrastructure.scheduler.proactive_recommendation_scheduler import star
 logger = logging.getLogger(__name__)
 
 settings: Settings = get_settings()
-
-Base.metadata.create_all(bind=engine)
 try:
     PgBase.metadata.create_all(bind=pg_engine)
 except Exception:
@@ -75,126 +72,6 @@ except Exception:
         "PostgreSQL schema init failed — JSONB article content store unavailable. "
         "Check PG_* env and that Postgres is reachable from the API container (not host localhost unless network_mode=host)."
     )
-
-
-def _run_column_migrations():
-    """create_all이 처리하지 못하는 기존 테이블 컬럼 추가를 수동으로 실행."""
-    from sqlalchemy import text
-
-    def _column_exists(conn, table: str, column: str) -> bool:
-        row = conn.execute(text(
-            "SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS "
-            "WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = :t AND COLUMN_NAME = :c"
-        ), {"t": table, "c": column}).scalar()
-        return row > 0
-
-    def _index_exists(conn, table: str, index: str) -> bool:
-        row = conn.execute(text(
-            "SELECT COUNT(*) FROM INFORMATION_SCHEMA.STATISTICS "
-            "WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = :t AND INDEX_NAME = :i"
-        ), {"t": table, "i": index}).scalar()
-        return row > 0
-
-    with engine.connect() as conn:
-        # accounts — role (BL-BE-68)
-        if not _column_exists(conn, "accounts", "role"):
-            try:
-                conn.execute(text(
-                    "ALTER TABLE accounts ADD COLUMN role VARCHAR(10) NOT NULL DEFAULT 'NORMAL'"
-                ))
-                conn.commit()
-                logger.info("[migration] accounts.role 추가 완료")
-            except Exception as e:
-                logger.warning(f"[migration] accounts.role 추가 실패: {e}")
-
-        # accounts — is_watchlist_public
-        if not _column_exists(conn, "accounts", "is_watchlist_public"):
-            try:
-                conn.execute(text(
-                    "ALTER TABLE accounts ADD COLUMN is_watchlist_public BOOLEAN NOT NULL DEFAULT TRUE"
-                ))
-                conn.commit()
-                logger.info("[migration] accounts.is_watchlist_public 추가 완료")
-            except Exception as e:
-                logger.warning(f"[migration] accounts.is_watchlist_public 추가 실패: {e}")
-
-        # saved_articles — account_id 추가
-        if not _column_exists(conn, "saved_articles", "account_id"):
-            try:
-                conn.execute(text(
-                    "ALTER TABLE saved_articles ADD COLUMN account_id INT NOT NULL DEFAULT 0"
-                ))
-                conn.commit()
-                logger.info("[migration] saved_articles.account_id 추가 완료")
-            except Exception as e:
-                logger.warning(f"[migration] saved_articles.account_id 추가 실패: {e}")
-
-        # saved_articles — content 컬럼 제거
-        if _column_exists(conn, "saved_articles", "content"):
-            try:
-                conn.execute(text("ALTER TABLE saved_articles DROP COLUMN content"))
-                conn.commit()
-                logger.info("[migration] saved_articles.content 제거 완료")
-            except Exception as e:
-                logger.warning(f"[migration] saved_articles.content 제거 실패: {e}")
-
-        # saved_articles — 구 link_hash 단독 인덱스 제거
-        if _index_exists(conn, "saved_articles", "link_hash"):
-            try:
-                conn.execute(text("ALTER TABLE saved_articles DROP INDEX link_hash"))
-                conn.commit()
-                logger.info("[migration] saved_articles.link_hash 인덱스 제거 완료")
-            except Exception as e:
-                logger.warning(f"[migration] saved_articles.link_hash 인덱스 제거 실패: {e}")
-
-        # saved_articles — (account_id, link_hash) unique 인덱스 추가
-        if not _index_exists(conn, "saved_articles", "uq_saved_articles_account_link"):
-            try:
-                conn.execute(text(
-                    "ALTER TABLE saved_articles "
-                    "ADD UNIQUE INDEX uq_saved_articles_account_link (account_id, link_hash)"
-                ))
-                conn.commit()
-                logger.info("[migration] saved_articles unique constraint 추가 완료")
-            except Exception as e:
-                logger.warning(f"[migration] saved_articles unique constraint 추가 실패: {e}")
-
-        # user_interactions — name, market (BL-BE-62)
-        if not _column_exists(conn, "user_interactions", "name"):
-            try:
-                conn.execute(text("ALTER TABLE user_interactions ADD COLUMN name VARCHAR(100)"))
-                conn.commit()
-                logger.info("[migration] user_interactions.name 추가 완료")
-            except Exception as e:
-                logger.warning(f"[migration] user_interactions.name 추가 실패: {e}")
-
-        if not _column_exists(conn, "user_interactions", "market"):
-            try:
-                conn.execute(text("ALTER TABLE user_interactions ADD COLUMN market VARCHAR(20)"))
-                conn.commit()
-                logger.info("[migration] user_interactions.market 추가 완료")
-            except Exception as e:
-                logger.warning(f"[migration] user_interactions.market 추가 실패: {e}")
-
-        # analysis_logs — article_published_at, source_name (BL-BE-75/76)
-        if not _column_exists(conn, "analysis_logs", "article_published_at"):
-            try:
-                conn.execute(text("ALTER TABLE analysis_logs ADD COLUMN article_published_at DATETIME NULL"))
-                conn.commit()
-                logger.info("[migration] analysis_logs.article_published_at 추가 완료")
-            except Exception as e:
-                logger.warning(f"[migration] analysis_logs.article_published_at 추가 실패: {e}")
-
-        if not _column_exists(conn, "analysis_logs", "source_name"):
-            try:
-                conn.execute(text("ALTER TABLE analysis_logs ADD COLUMN source_name VARCHAR(100) NULL"))
-                conn.commit()
-                logger.info("[migration] analysis_logs.source_name 추가 완료")
-            except Exception as e:
-                logger.warning(f"[migration] analysis_logs.source_name 추가 실패: {e}")
-
-
-_run_column_migrations()
 
 
 @asynccontextmanager

@@ -18,7 +18,7 @@ class AnalysisLogORM(Base):
     sentiment = Column(String(20), nullable=False)
     sentiment_score = Column(Float, nullable=False)
     confidence = Column(Float, nullable=False)
-    source_type = Column(String(20), nullable=True, default="NEWS")
+    source_type = Column(String(50), nullable=True, default="NEWS")
     account_id = Column(Integer, nullable=True)
     url = Column(String(500), nullable=True)
     article_published_at = Column(DateTime, nullable=True)

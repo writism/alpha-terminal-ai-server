@@ -10,7 +10,7 @@ class WatchlistItemORM(Base):
 
     id = Column(Integer, primary_key=True, autoincrement=True)
     account_id = Column(Integer, nullable=True)
-    symbol = Column(String(20), nullable=False)
+    symbol = Column(String(6), nullable=False)
     name = Column(String(100), nullable=False)
     market = Column(String(10), nullable=True)
     created_at = Column(DateTime, default=datetime.now)

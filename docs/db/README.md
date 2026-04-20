@@ -8,6 +8,11 @@
 |------|------|
 | `docker-compose.yml` | MySQL Docker 설정 (팀 공통) |
 | `alembic-guide.md` | Alembic 개념 및 사용법 설명 |
+| `MYSQL-MIGRATION-INVENTORY-AND-BASELINE-PLAN-20260418.md` | MySQL baseline 전환 계획과 현재 상태 |
+| `MYSQL-BASELINE-STAMP-RUNBOOK-20260418.md` | 기존 DB baseline stamp 실행 절차 |
+| `MYSQL-RUNTIME-MIGRATION-REMOVAL-CHECKLIST-20260418.md` | `_run_column_migrations()` 제거 readiness 체크리스트 |
+| `MYSQL-RUNTIME-MIGRATION-READINESS-STATUS-20260418.md` | 환경별 readiness 점검 결과표 |
+| `check_mysql_runtime_migration_readiness.py` | 현재 환경이 runtime migration 제거 후보인지 자동 판정 |
 | `env.py` | `alembic init` 후 `alembic/env.py`에 덮어쓸 완성본 |
 | `alembic.ini.example` | `alembic.ini` 예시 |
 
