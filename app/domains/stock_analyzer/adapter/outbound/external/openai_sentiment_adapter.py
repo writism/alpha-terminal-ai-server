@@ -1,7 +1,7 @@
 import json
 from typing import Tuple
 
-from openai import OpenAI
+from openai import AsyncOpenAI
 
 from app.domains.stock_analyzer.application.usecase.sentiment_analysis_port import SentimentAnalysisPort
 from app.infrastructure.config.settings import get_settings
@@ -25,12 +25,12 @@ PROMPT_TEMPLATE = """다음 기사를 분석하여 아래 JSON 형식으로만 �
 
 class OpenAISentimentAdapter(SentimentAnalysisPort):
     def __init__(self, api_key: str):
-        self._client = OpenAI(api_key=api_key)
+        self._client = AsyncOpenAI(api_key=api_key)
 
     async def analyze(self, title: str, body: str) -> Tuple[str, float]:
         prompt = PROMPT_TEMPLATE.format(title=title, body=body[:3000])
 
-        response = self._client.chat.completions.create(
+        response = await self._client.chat.completions.create(
             model=get_settings().openai_model,
             messages=[{"role": "user", "content": prompt}],
         )

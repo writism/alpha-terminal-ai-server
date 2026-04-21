@@ -1,7 +1,7 @@
 import json
 from datetime import datetime
 
-from openai import OpenAI
+from openai import AsyncOpenAI
 
 from app.domains.stock_analyzer.application.usecase.article_analyzer_port import ArticleAnalyzerPort
 from app.infrastructure.config.settings import get_settings
@@ -62,7 +62,7 @@ MULTI_ARTICLE_PROMPT_TEMPLATE = """다음은 {name}({symbol})에 대한 최근 �
 
 class OpenAIAnalyzerAdapter(ArticleAnalyzerPort):
     def __init__(self, api_key: str, model: str = "gpt-3.5-turbo"):
-        self._client = OpenAI(api_key=api_key)
+        self._client = AsyncOpenAI(api_key=api_key)
         self._model = model
 
     async def analyze(self, article_id: str, title: str, body: str, category: str) -> AnalyzedArticle:
@@ -72,7 +72,7 @@ class OpenAIAnalyzerAdapter(ArticleAnalyzerPort):
             body=body[:3000],
         )
 
-        response = self._client.chat.completions.create(
+        response = await self._client.chat.completions.create(
             model=get_settings().openai_model,
             messages=[{"role": "user", "content": prompt}],
         )
@@ -112,7 +112,7 @@ class OpenAIAnalyzerAdapter(ArticleAnalyzerPort):
             articles_text=articles_text,
         )
 
-        response = self._client.chat.completions.create(
+        response = await self._client.chat.completions.create(
             model=get_settings().openai_model,
             messages=[{"role": "user", "content": prompt}],
         )

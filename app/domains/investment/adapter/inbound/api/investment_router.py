@@ -101,37 +101,32 @@ async def investment_decision(
 def _lookup_symbol_by_name(company_name: str) -> Optional[str]:
     """company명으로 종목 symbol을 동기 조회한다."""
     from app.domains.stock.infrastructure.orm.stock_orm import StockORM
-    from app.infrastructure.database.session import SessionLocal
+    from app.infrastructure.database.session import session_scope
 
-    db = SessionLocal()
-    try:
+    with session_scope() as db:
         orm = db.query(StockORM).filter(StockORM.name == company_name).first()
         if not orm:
             orm = db.query(StockORM).filter(StockORM.name.like(f"%{company_name}%")).first()
         return orm.symbol if orm else None
-    finally:
-        db.close()
 
 
 def _find_cached_answer(symbol: str, force: bool) -> Optional[str]:
     """symbol 기준 유효 캐시를 동기 조회한다. force=True 이면 None 반환."""
     if force:
         return None
-    db = PgSessionLocal()
-    try:
+    from app.infrastructure.database.pg_session import pg_session_scope
+
+    with pg_session_scope() as db:
         cached = AnalysisCacheRepository(db).find_valid(symbol)
         return cached.answer if cached else None
-    finally:
-        db.close()
 
 
 def _save_cache(symbol: str, query: str, answer: str) -> None:
     """분석 결과를 캐시에 동기 저장한다."""
-    db = PgSessionLocal()
-    try:
+    from app.infrastructure.database.pg_session import pg_session_scope
+
+    with pg_session_scope() as db:
         AnalysisCacheRepository(db).save(symbol=symbol, query=query, answer=answer)
-    finally:
-        db.close()
 
 
 @router.post("/decision/stream")

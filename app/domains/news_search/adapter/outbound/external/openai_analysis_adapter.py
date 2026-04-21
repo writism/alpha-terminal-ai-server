@@ -1,6 +1,6 @@
 import json
 
-from openai import OpenAI
+from openai import AsyncOpenAI
 
 from app.domains.news_search.application.usecase.article_analysis_port import ArticleAnalysisPort
 from app.domains.news_search.domain.entity.article_analysis import ArticleAnalysis
@@ -25,10 +25,10 @@ PROMPT_TEMPLATE = """다음 기사 본문을 분석하여 아래 JSON 형식으�
 
 class OpenAIAnalysisAdapter(ArticleAnalysisPort):
     def __init__(self, api_key: str):
-        self._client = OpenAI(api_key=api_key)
+        self._client = AsyncOpenAI(api_key=api_key)
 
     async def analyze(self, article_id: int, content: str) -> ArticleAnalysis:
-        response = self._client.chat.completions.create(
+        response = await self._client.chat.completions.create(
             model=get_settings().openai_model,
             messages=[{"role": "user", "content": PROMPT_TEMPLATE.format(content=content[:3000])}],
         )

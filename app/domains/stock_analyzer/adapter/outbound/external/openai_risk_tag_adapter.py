@@ -1,7 +1,7 @@
 import json
 from typing import List
 
-from openai import OpenAI
+from openai import AsyncOpenAI
 
 from app.domains.stock_analyzer.application.usecase.risk_tagging_port import RiskTaggingPort
 from app.domains.stock_analyzer.domain.entity.tag_item import TagCategory, TagItem
@@ -28,12 +28,12 @@ PROMPT_TEMPLATE = """다음 기사를 분석하여 아래 JSON 형식으로만 �
 
 class OpenAIRiskTagAdapter(RiskTaggingPort):
     def __init__(self, api_key: str):
-        self._client = OpenAI(api_key=api_key)
+        self._client = AsyncOpenAI(api_key=api_key)
 
     async def tag(self, title: str, body: str) -> List[TagItem]:
         prompt = PROMPT_TEMPLATE.format(title=title, body=body[:3000])
 
-        response = self._client.chat.completions.create(
+        response = await self._client.chat.completions.create(
             model=get_settings().openai_model,
             messages=[{"role": "user", "content": prompt}],
         )

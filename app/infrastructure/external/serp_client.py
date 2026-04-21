@@ -28,20 +28,40 @@ class SerpApiError(Exception):
 
 
 class SerpClient:
+    # 프로세스 전역에서 재사용되는 httpx.Client (커넥션 풀링으로 TLS/TCP 재연결 비용 제거)
+    _shared_client: httpx.Client | None = None
+
     def __init__(self) -> None:
         settings = get_settings()
         self._api_key = settings.serp_api_key
         self._base_url = settings.serp_base_url
         self._timeout = settings.serp_timeout
 
+    @classmethod
+    def _get_client(cls) -> httpx.Client:
+        if cls._shared_client is None:
+            cls._shared_client = httpx.Client(
+                timeout=get_settings().serp_timeout,
+                limits=httpx.Limits(max_connections=20, max_keepalive_connections=10),
+            )
+        return cls._shared_client
+
+    @classmethod
+    def close(cls) -> None:
+        """BL-BE-85: lifespan shutdown 에서 호출 — 커넥션 풀 정리."""
+        if cls._shared_client is not None:
+            cls._shared_client.close()
+            cls._shared_client = None
+
     def get(self, params: Dict[str, Any]) -> Dict[str, Any]:
         """SERP API GET 요청. 재시도 포함. 인증 파라미터 자동 주입."""
         all_params = {**params, "api_key": self._api_key}
+        client = self._get_client()
 
         last_exc: Exception | None = None
         for attempt in range(1, _MAX_RETRIES + 1):
             try:
-                response = httpx.get(self._base_url, params=all_params, timeout=self._timeout)
+                response = client.get(self._base_url, params=all_params, timeout=self._timeout)
                 response.raise_for_status()
                 return response.json()
             except httpx.HTTPStatusError as e:

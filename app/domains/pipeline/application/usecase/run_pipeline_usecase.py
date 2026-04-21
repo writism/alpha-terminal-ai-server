@@ -5,6 +5,7 @@ from typing import Awaitable, Callable, Optional
 
 from app.domains.pipeline.application.request.run_pipeline_request import ArticleMode
 from app.domains.pipeline.application.response.analysis_log_response import AnalysisLogResponse
+from app.domains.pipeline.application.response.run_pipeline_result import RunPipelineResult
 from app.domains.pipeline.application.response.stock_summary_response import StockSummaryResponse
 from app.domains.stock_analyzer.application.usecase.article_analyzer_port import ArticleAnalyzerPort
 from app.domains.stock_analyzer.application.usecase.get_or_create_analysis_usecase import GetOrCreateAnalysisUseCase
@@ -16,6 +17,9 @@ logger = logging.getLogger(__name__)
 
 NEWS_SOURCE_TYPES = {"NEWS"}
 REPORT_SOURCE_TYPES = {"DISCLOSURE", "REPORT"}
+
+# 단건 분석 시 동시에 처리할 기사 최대 개수 (LLM/DB 부하 상한)
+_SINGLE_BEST_CONCURRENCY = 4
 
 OnEvent = Callable[[dict], Awaitable[None]]
 
@@ -92,6 +96,9 @@ class RunPipelineUseCase:
         self._analysis_usecase = analysis_usecase
         self._stock_repository = stock_repository
         self._analyzer_port = analyzer_port
+        # BL-BE-83: 인스턴스 레벨 Semaphore — 전체 파이프라인 단위로 동시성 상한 공유
+        # 메서드 내부 생성 시 심볼·소스타입마다 독립 Semaphore 가 생겨 상한 무력화됨
+        self._semaphore = asyncio.Semaphore(_SINGLE_BEST_CONCURRENCY)
 
     async def execute(
         self,
@@ -99,16 +106,20 @@ class RunPipelineUseCase:
         account_id: Optional[int] = None,
         on_event: Optional[OnEvent] = None,
         article_mode: ArticleMode = ArticleMode.LATEST_3,
-    ) -> dict:
+    ) -> RunPipelineResult:
+        logger.info(
+            "[Pipeline] 실행 시작 — account_id=%s article_mode=%s selected=%s",
+            account_id, article_mode.value, selected_symbols or "ALL",
+        )
         watchlist_items = self._watchlist_repository.find_all(account_id=account_id)
         if not watchlist_items:
-            return {"message": "관심종목이 없습니다.", "processed": [], "summaries": [], "report_summaries": [], "logs": []}
+            return RunPipelineResult(message="관심종목이 없습니다.")
 
         if selected_symbols:
             selected_set = {symbol.upper() for symbol in selected_symbols}
             watchlist_items = [item for item in watchlist_items if item.symbol.upper() in selected_set]
             if not watchlist_items:
-                return {"message": "선택한 관심종목이 없습니다.", "processed": [], "summaries": [], "report_summaries": [], "logs": []}
+                return RunPipelineResult(message="선택한 관심종목이 없습니다.")
 
         total = len(watchlist_items)
         await _emit(on_event, {
@@ -176,6 +187,13 @@ class RunPipelineUseCase:
                 ),
             })
             symbol_data[symbol] = (item.name, selected_news, selected_reports)
+            logger.info(
+                "[Pipeline] %s(%s) 기사 선택 — 뉴스 %d/%d건, 공시·리포트 %d/%d건 (mode=%s)",
+                name, symbol,
+                len(selected_news), len(news_articles),
+                len(selected_reports), len(report_articles),
+                article_mode.value,
+            )
 
         await _emit(on_event, {
             "type": "progress",
@@ -282,18 +300,23 @@ class RunPipelineUseCase:
             "message": f"✅ 파이프라인 완료 — 뉴스 {len(summaries)}건, 공시·리포트 {len(report_summaries)}건",
         })
 
-        return {
-            "message": "파이프라인 완료",
-            "processed": results,
-            "summaries": summaries,
-            "report_summaries": report_summaries,
-            "logs": logs,
-        }
+        return RunPipelineResult(
+            message="파이프라인 완료",
+            processed=results,
+            summaries=summaries,
+            report_summaries=report_summaries,
+            logs=logs,
+        )
 
     async def _analyze_articles(self, raw_articles, symbol: str, name: str):
         """기사 목록을 분석한다. 복수 기사는 종합 요약, 단건은 개별 분석."""
         if not raw_articles:
             return None
+        logger.info(
+            "[Analyzer] %s(%s) stock_analyzer 입력 %d건 → %s",
+            name, symbol, len(raw_articles),
+            "synthesize_multi" if len(raw_articles) > 1 and self._analyzer_port else "single_best",
+        )
 
         if len(raw_articles) == 1 or self._analyzer_port is None:
             return await self._analyze_single_best(raw_articles, symbol)
@@ -301,46 +324,51 @@ class RunPipelineUseCase:
         return await self._synthesize_multi(raw_articles, symbol, name)
 
     async def _analyze_single_best(self, raw_articles, symbol: str):
-        """단건 분석: confidence 가장 높은 결과 반환 (캐시 활용)."""
-        best_analysis = None
-        best_source_type = None
-        best_url = None
-        best_published_at = None
-        best_source_name = None
+        """단건 분석: confidence 가장 높은 결과 반환 (캐시 활용).
 
-        for raw in raw_articles:
-            try:
-                published_at = _get_published_dt(raw)
-                if published_at == datetime.min:
-                    published_at = datetime.now()
+        각 기사에 대한 정규화+분석은 인스턴스 공유 Semaphore 로 동시성을 제한한 채 병렬로 실행한다.
+        BL-BE-83: self._semaphore 사용 — 전체 파이프라인 단위로 동시성 상한을 공유한다.
+        """
+        async def analyze_one(raw):
+            async with self._semaphore:
+                try:
+                    published_at = _get_published_dt(raw)
+                    if published_at == datetime.min:
+                        published_at = datetime.now()
 
-                normalized = await self._normalize_usecase.execute(NormalizeRawArticleRequest(
-                    id=str(raw.id),
-                    source_type=raw.source_type,
-                    source_name=raw.source_name,
-                    title=raw.title,
-                    body_text=raw.body_text or raw.title,
-                    published_at=published_at,
-                    symbol=raw.symbol,
-                    lang=raw.lang or "ko",
-                ))
+                    normalized = await self._normalize_usecase.execute(NormalizeRawArticleRequest(
+                        id=str(raw.id),
+                        source_type=raw.source_type,
+                        source_name=raw.source_name,
+                        title=raw.title,
+                        body_text=raw.body_text or raw.title,
+                        published_at=published_at,
+                        symbol=raw.symbol,
+                        lang=raw.lang or "ko",
+                    ))
 
-                analysis = await self._analysis_usecase.execute(normalized.id)
+                    analysis = await self._analysis_usecase.execute(normalized.id)
+                    return (
+                        analysis,
+                        raw.source_type,
+                        getattr(raw, "url", None),
+                        published_at if published_at != datetime.min else None,
+                        getattr(raw, "source_name", None),
+                    )
+                except Exception as e:
+                    logger.warning(f"[Pipeline] {symbol} 단건 분석 실패: {e}")
+                    return None
 
-                if best_analysis is None or analysis.confidence > best_analysis.confidence:
-                    best_analysis = analysis
-                    best_source_type = raw.source_type
-                    best_url = getattr(raw, "url", None)
-                    best_published_at = published_at if published_at != datetime.min else None
-                    best_source_name = getattr(raw, "source_name", None)
+        results = await asyncio.gather(*(analyze_one(r) for r in raw_articles))
 
-            except Exception as e:
-                logger.warning(f"[Pipeline] {symbol} 단건 분석 실패: {e}")
+        best: tuple | None = None
+        for item in results:
+            if item is None:
                 continue
+            if best is None or item[0].confidence > best[0].confidence:
+                best = item
 
-        if best_analysis is None:
-            return None
-        return best_analysis, best_source_type, best_url, best_published_at, best_source_name
+        return best
 
     async def _synthesize_multi(self, raw_articles, symbol: str, name: str):
         """복수 기사 종합 요약: 최신순 정렬된 기사 전체를 1번의 AI 호출로 종합."""

@@ -8,8 +8,10 @@ from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 
 from app.domains.pipeline.adapter.outbound.persistence.analysis_log_repository_impl import AnalysisLogRepositoryImpl
+from app.domains.pipeline.adapter.outbound.state.factory import get_progress_store, get_summary_registry
 from app.domains.pipeline.application.request.run_pipeline_request import ArticleMode, RunPipelineRequest
 from app.domains.pipeline.application.response.analysis_log_response import AnalysisLogResponse
+from app.domains.pipeline.application.response.run_pipeline_result import RunPipelineResponse
 from app.domains.pipeline.application.response.stock_summary_response import StockSummaryResponse
 from app.domains.pipeline.application.usecase.run_pipeline_usecase import RunPipelineUseCase
 from app.domains.stock_analyzer.adapter.outbound.external.openai_analyzer_adapter import OpenAIAnalyzerAdapter
@@ -32,8 +34,6 @@ router = APIRouter(prefix="/pipeline", tags=["pipeline"])
 
 _settings = get_settings()
 _analysis_repository = InMemoryArticleAnalysisRepository()
-_progress_store: dict[Optional[int], list[str]] = {}
-_summary_registry: dict[Optional[int], dict[str, StockSummaryResponse]] = {}
 
 
 def _log_to_summary(log) -> StockSummaryResponse:
@@ -76,7 +76,7 @@ def _build_usecase(db: Session) -> RunPipelineUseCase:
     )
 
 
-@router.post("/run")
+@router.post("/run", response_model=RunPipelineResponse)
 async def run_pipeline(
     request: RunPipelineRequest | None = None,
     db: Session = Depends(get_db),
@@ -91,15 +91,13 @@ async def run_pipeline(
         article_mode=article_mode,
     )
 
-    if parsed_account_id not in _summary_registry:
-        _summary_registry[parsed_account_id] = {}
-    for summary in result["summaries"]:
-        _summary_registry[parsed_account_id][summary.symbol] = summary
+    get_summary_registry().put_all(parsed_account_id, result.summaries)
 
     log_repo = AnalysisLogRepositoryImpl(db)
-    log_repo.save_all(result.get("logs", []), account_id=parsed_account_id)
+    log_repo.save_all(result.logs, account_id=parsed_account_id)
 
-    return {"message": result["message"], "processed": result["processed"]}
+    # BL-BE-86: RunPipelineResponse DTO 로 명시적 반환
+    return RunPipelineResponse(message=result.message, processed=result.processed)
 
 
 @router.post("/run-stream")
@@ -129,17 +127,14 @@ async def run_pipeline_stream(
                     on_event=on_event,
                     article_mode=article_mode,
                 )
-                if parsed_account_id not in _summary_registry:
-                    _summary_registry[parsed_account_id] = {}
-                for summary in result["summaries"]:
-                    _summary_registry[parsed_account_id][summary.symbol] = summary
+                get_summary_registry().put_all(parsed_account_id, result.summaries)
                 log_repo = AnalysisLogRepositoryImpl(db)
-                log_repo.save_all(result.get("logs", []), account_id=parsed_account_id)
+                log_repo.save_all(result.logs, account_id=parsed_account_id)
                 await queue.put({
                     "type": "done",
                     "at": datetime.now(timezone.utc).isoformat(),
-                    "message": result["message"],
-                    "processed": result["processed"],
+                    "message": result.message,
+                    "processed": result.processed,
                 })
             except Exception as e:
                 await queue.put({"type": "error", "at": datetime.now(timezone.utc).isoformat(), "message": str(e)})
@@ -162,7 +157,7 @@ async def run_pipeline_stream(
 @router.get("/progress")
 async def get_progress(account_id: Optional[str] = Cookie(default=None)):
     parsed_account_id = int(account_id) if account_id else None
-    messages = _progress_store.get(parsed_account_id, [])
+    messages = get_progress_store().read_all(parsed_account_id)
     done = bool(messages) and messages[-1].startswith("✅")
     return {"messages": messages, "done": done}
 
@@ -200,15 +195,23 @@ async def get_analysis_logs(
 
 
 async def run_pipeline_job():
-    """스케줄러에서 호출되는 파이프라인 자동 실행 함수"""
+    """스케줄러에서 호출되는 파이프라인 자동 실행 함수.
+
+    HTTP 라우트 핸들러(`run_pipeline`)를 직접 호출하지 않고 `RunPipelineUseCase` 를 바로 실행한다.
+    이로써 HTTP 계층(쿠키/의존성)과 작업 계층을 분리하고, 모든 사용자(account_id=None, 즉 전역 관심종목)
+    범위에서 동작하도록 한다.
+    """
     import logging
     from app.infrastructure.database.session import SessionLocal
     logger = logging.getLogger(__name__)
     logger.info("[Scheduler] 매일 07:00 파이프라인 자동 실행 시작")
     db = SessionLocal()
     try:
-        result = await run_pipeline(db=db)
-        logger.info(f"[Scheduler] 파이프라인 완료: {result}")
+        result = await _build_usecase(db).execute(article_mode=ArticleMode.LATEST_3)
+        get_summary_registry().put_all(None, result.summaries)
+        log_repo = AnalysisLogRepositoryImpl(db)
+        log_repo.save_all(result.logs, account_id=None)
+        logger.info(f"[Scheduler] 파이프라인 완료: {result.message} / processed={len(result.processed)}")
     except Exception as e:
         logger.error(f"[Scheduler] 파이프라인 실행 실패: {e}")
     finally:

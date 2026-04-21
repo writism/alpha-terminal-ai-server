@@ -58,6 +58,7 @@ from app.domains.investment.infrastructure.orm.investment_youtube_comment_orm im
 from app.domains.investment.infrastructure.orm.analysis_cache_orm import AnalysisCacheORM  # noqa: F401
 from app.infrastructure.config.settings import Settings, get_settings
 from app.infrastructure.database.pg_session import PgBase, pg_engine, check_pg_health
+from app.infrastructure.external.serp_client import SerpClient
 from app.infrastructure.scheduler.pipeline_scheduler import start_scheduler, stop_scheduler
 from app.infrastructure.scheduler.profile_update_scheduler import start_profile_scheduler, stop_profile_scheduler
 from app.infrastructure.scheduler.proactive_recommendation_scheduler import start_proactive_recommendation_scheduler, stop_proactive_recommendation_scheduler
@@ -65,17 +66,20 @@ from app.infrastructure.scheduler.proactive_recommendation_scheduler import star
 logger = logging.getLogger(__name__)
 
 settings: Settings = get_settings()
-try:
-    PgBase.metadata.create_all(bind=pg_engine)
-except Exception:
-    logger.exception(
-        "PostgreSQL schema init failed — JSONB article content store unavailable. "
-        "Check PG_* env and that Postgres is reachable from the API container (not host localhost unless network_mode=host)."
-    )
 
 
 @asynccontextmanager
 async def lifespan(fastapi_app: FastAPI):
+    # BL-BE-84: PG create_all 을 lifespan startup 으로 이동 (모듈 레벨 실행 제거)
+    # TODO: PG Alembic cutover 완료 후 아래 create_all 블록 제거하고 alembic upgrade head 로 대체
+    try:
+        PgBase.metadata.create_all(bind=pg_engine)
+    except Exception:
+        logger.exception(
+            "PostgreSQL schema init failed — JSONB article content store unavailable. "
+            "Check PG_* env and that Postgres is reachable from the API container (not host localhost unless network_mode=host)."
+        )
+
     check_pg_health()
     from app.domains.pipeline.adapter.inbound.api.pipeline_router import run_pipeline_job
     start_scheduler(run_pipeline_job)
@@ -85,6 +89,8 @@ async def lifespan(fastapi_app: FastAPI):
     stop_scheduler()
     stop_profile_scheduler()
     stop_proactive_recommendation_scheduler()
+    # BL-BE-85: SerpClient httpx.Client 커넥션 풀 명시적 종료
+    SerpClient.close()
 
 
 app = FastAPI(debug=settings.debug, lifespan=lifespan)

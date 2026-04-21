@@ -4,10 +4,12 @@
 이 모듈은 뉴스 원문·공시 본문·리포트 등 비정형 데이터 저장에 사용한다.
 """
 import logging
+from contextlib import contextmanager
+from typing import Iterator
 from urllib.parse import quote_plus
 
 from sqlalchemy import create_engine, text
-from sqlalchemy.orm import sessionmaker, DeclarativeBase
+from sqlalchemy.orm import sessionmaker, DeclarativeBase, Session
 
 from app.infrastructure.config.settings import get_settings
 
@@ -44,6 +46,16 @@ class PgBase(DeclarativeBase):
 
 
 def get_pg_db():
+    db = PgSessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
+
+
+@contextmanager
+def pg_session_scope() -> Iterator[Session]:
+    """FastAPI 의존성 밖에서 PostgreSQL 세션을 일관되게 열고 닫기 위한 유틸."""
     db = PgSessionLocal()
     try:
         yield db
