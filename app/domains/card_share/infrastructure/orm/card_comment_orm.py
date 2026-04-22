@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from sqlalchemy import Column, DateTime, Integer, String, Text
+from sqlalchemy import Column, DateTime, ForeignKey, Integer, String, Text
 
 from app.infrastructure.database.session import Base
 
@@ -9,7 +9,7 @@ class CardCommentORM(Base):
     __tablename__ = "card_comments"
 
     id = Column(Integer, primary_key=True, autoincrement=True)
-    shared_card_id = Column(Integer, nullable=False)
+    shared_card_id = Column(Integer, ForeignKey("shared_cards.id", ondelete="CASCADE"), nullable=False)
     content = Column(String(120), nullable=False)
     author_nickname = Column(String(100), nullable=True)
     author_account_id = Column(Integer, nullable=True)

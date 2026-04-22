@@ -66,3 +66,16 @@ def get_settings() -> Settings:
     main.settings)은 프로세스 재시작 전까지 갱신되지 않는다.
     """
     return Settings()
+
+
+def validate_required_keys(s: Settings) -> None:
+    """앱 시작 시 필수 API 키 누락 여부를 검증한다. 누락 시 ValueError로 즉시 중단."""
+    required = {
+        "kakao_client_id": s.kakao_client_id,
+        "kakao_client_secret": s.kakao_client_secret,
+        "kakao_redirect_uri": s.kakao_redirect_uri,
+        "openai_api_key": s.openai_api_key,
+    }
+    missing = [k for k, v in required.items() if not v]
+    if missing:
+        raise ValueError(f"필수 API 키 누락 — .env 파일을 확인하세요: {', '.join(missing)}")
