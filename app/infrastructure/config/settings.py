@@ -69,7 +69,9 @@ def get_settings() -> Settings:
 
 
 def validate_required_keys(s: Settings) -> None:
-    """앱 시작 시 필수 API 키 누락 여부를 검증한다. 누락 시 ValueError로 즉시 중단."""
+    """앱 시작 시 필수 API 키 누락 여부를 경고 로그로 출력한다."""
+    import logging
+    logger = logging.getLogger(__name__)
     required = {
         "kakao_client_id": s.kakao_client_id,
         "kakao_client_secret": s.kakao_client_secret,
@@ -78,4 +80,4 @@ def validate_required_keys(s: Settings) -> None:
     }
     missing = [k for k, v in required.items() if not v]
     if missing:
-        raise ValueError(f"필수 API 키 누락 — .env 파일을 확인하세요: {', '.join(missing)}")
+        logger.warning(f"API 키 누락 — 해당 기능이 동작하지 않을 수 있습니다: {', '.join(missing)}")
