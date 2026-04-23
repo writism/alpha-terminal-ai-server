@@ -31,10 +31,10 @@ class Settings(BaseSettings):
     twelve_data_api_key: str = ""
     # BL-BE-15: False면 히트맵 캐시는 인메모리만
     heatmap_redis_cache_enabled: bool = True
-    # BL-BE-89: market_videos 가 이 시간보다 오래됐으면 on-demand 재수집 trigger
-    market_video_stale_hours: int = 6
     # 파이프라인 진행/요약 상태 저장소 — True면 Redis 기반, 실패/False면 in-memory 폴백
     pipeline_state_redis_enabled: bool = True
+    # BL-BE-89: market_videos 가 이 시간보다 오래됐으면 on-demand 재수집 trigger
+    market_video_stale_hours: int = 6
     naver_client_id: str = ""
     naver_secret: str = ""
     twitter_bearer_token: str = ""
@@ -66,18 +66,3 @@ def get_settings() -> Settings:
     main.settings)은 프로세스 재시작 전까지 갱신되지 않는다.
     """
     return Settings()
-
-
-def validate_required_keys(s: Settings) -> None:
-    """앱 시작 시 필수 API 키 누락 여부를 경고 로그로 출력한다."""
-    import logging
-    logger = logging.getLogger(__name__)
-    required = {
-        "kakao_client_id": s.kakao_client_id,
-        "kakao_client_secret": s.kakao_client_secret,
-        "kakao_redirect_uri": s.kakao_redirect_uri,
-        "openai_api_key": s.openai_api_key,
-    }
-    missing = [k for k, v in required.items() if not v]
-    if missing:
-        logger.warning(f"API 키 누락 — 해당 기능이 동작하지 않을 수 있습니다: {', '.join(missing)}")

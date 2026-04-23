@@ -52,12 +52,11 @@ from app.domains.investment.adapter.inbound.api.investment_router import router 
 from app.domains.admin.adapter.inbound.api.admin_router import router as admin_router
 from app.domains.notification.adapter.inbound.api.notification_router import router as notification_router
 from app.domains.notification.infrastructure.orm.notification_orm import NotificationORM  # noqa: F401
-from app.domains.agent_proactive_recommendation.adapter.inbound.api.proactive_recommendation_router import router as proactive_recommendation_router
 from app.domains.investment.infrastructure.orm.investment_youtube_log_orm import InvestmentYouTubeLogORM  # noqa: F401
 from app.domains.investment.infrastructure.orm.investment_youtube_video_orm import InvestmentYouTubeVideoORM  # noqa: F401
 from app.domains.investment.infrastructure.orm.investment_youtube_comment_orm import InvestmentYouTubeCommentORM  # noqa: F401
 from app.domains.investment.infrastructure.orm.analysis_cache_orm import AnalysisCacheORM  # noqa: F401
-from app.infrastructure.config.settings import Settings, get_settings, validate_required_keys
+from app.infrastructure.config.settings import Settings, get_settings
 from app.infrastructure.database.pg_session import PgBase, pg_engine, check_pg_health
 from app.infrastructure.external.serp_client import SerpClient
 from app.infrastructure.scheduler.pipeline_scheduler import start_scheduler, stop_scheduler
@@ -71,7 +70,6 @@ settings: Settings = get_settings()
 
 @asynccontextmanager
 async def lifespan(fastapi_app: FastAPI):
-    validate_required_keys(settings)
     # BL-BE-84: PG create_all 을 lifespan startup 으로 이동 (모듈 레벨 실행 제거)
     # TODO: PG Alembic cutover 완료 후 아래 create_all 블록 제거하고 alembic upgrade head 로 대체
     try:
@@ -132,7 +130,6 @@ app.include_router(investment_router)
 app.include_router(admin_router)
 app.include_router(notification_router)
 app.include_router(user_profile_router)
-app.include_router(proactive_recommendation_router)
 
 
 @app.get("/")

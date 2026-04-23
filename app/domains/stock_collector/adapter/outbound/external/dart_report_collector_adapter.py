@@ -14,41 +14,6 @@ logger = logging.getLogger(__name__)
 
 KEY_ACCOUNTS = {"매출액", "영업이익", "당기순이익", "자산총계", "부채총계", "자본총계"}
 
-REPRT_CODE_TO_NM = {
-    "11011": "사업보고서",
-    "11012": "반기보고서",
-    "11013": "분기보고서",
-    "11014": "분기보고서",
-}
-
-DART_LIST_URL = "https://opendart.fss.or.kr/api/list.json"
-
-
-def _fetch_rcp_no(api_key: str, corp_code: str, bsns_year: int, reprt_code: str) -> Optional[str]:
-    """재무제표에 해당하는 공시 rcpNo를 목록 API로 조회한다."""
-    report_nm_keyword = REPRT_CODE_TO_NM.get(reprt_code, "")
-    if not report_nm_keyword:
-        return None
-    try:
-        resp = httpx.get(DART_LIST_URL, params={
-            "crtfc_key": api_key,
-            "corp_code": corp_code,
-            "bgn_de": f"{bsns_year}0101",
-            "end_de": f"{bsns_year}1231",
-            "pblntf_ty": "A",
-            "page_count": "20",
-        }, timeout=10.0)
-        resp.raise_for_status()
-        data = resp.json()
-        if data.get("status") != "000":
-            return None
-        for item in data.get("list", []):
-            if report_nm_keyword in item.get("report_nm", ""):
-                return item.get("rcept_no")
-    except Exception:
-        pass
-    return None
-
 
 def _get_recent_reprt_code(now: datetime) -> Tuple[str, str]:
     """현재 날짜 기준으로 가장 최근에 공시됐을 보고서 코드와 기간 레이블 반환"""
@@ -177,18 +142,11 @@ class DartReportCollectorAdapter(CollectorPort):
             now = datetime.now()
             content = body_text.encode()
 
-            time.sleep(1)
-            rcp_no = _fetch_rcp_no(api_key, corp_code, bsns_year, reprt_code)
-            report_url = (
-                f"https://dart.fss.or.kr/dsaf001/main.do?rcpNo={rcp_no}"
-                if rcp_no else "https://dart.fss.or.kr/"
-            )
-
             return RawArticle(
                 source_type="REPORT",
                 source_name="DART_FINANCIAL",
                 source_doc_id=f"dart-fin-{symbol}-{bsns_year}-{reprt_code}-{fs_div}",
-                url=report_url,
+                url=f"https://dart.fss.or.kr/",
                 title=title,
                 body_text=body_text,
                 published_at=now.isoformat(),
