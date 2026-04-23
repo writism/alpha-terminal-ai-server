@@ -191,9 +191,6 @@ async def get_board(
     account_id: Optional[str] = Cookie(default=None),
     db: Session = Depends(get_db),
 ):
-    if not account_id:
-        raise HTTPException(status_code=401, detail="로그인이 필요합니다.")
-
     board_repository = BoardRepositoryImpl(db)
     board = board_repository.find_by_id(board_id)
     if not board:
