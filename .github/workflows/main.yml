@@ -31,9 +31,7 @@ jobs:
       - name: Run pyright
         run: pyright
 
-  # 시크릿 미설정 포크/조직에서는 스킵 — 실패 알림 스팸 방지 (GHCR 푸시는 메인 저장소 등에서만)
   build-and-push:
-    if: ${{ secrets.REPO_USER != '' && secrets.GHCR_TOKEN != '' }}
     runs-on: ubuntu-latest
 
     steps:
@@ -65,7 +63,6 @@ jobs:
           cache-to: type=registry,ref=ghcr.io/${{ secrets.REPO_USER }}/alpha-terminal-api:cache,mode=max
 
   deploy:
-    if: ${{ secrets.REPO_USER != '' && secrets.GHCR_TOKEN != '' }}
     needs: build-and-push
     runs-on: [self-hosted, alpha-terminal-api]
 
