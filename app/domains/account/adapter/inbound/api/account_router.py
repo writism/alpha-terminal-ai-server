@@ -55,10 +55,10 @@ async def register_account(
 
         frontend_url = _settings.cors_allowed_frontend_url
         response = JSONResponse(content={"success": True, "redirect_url": frontend_url})
-        response.set_cookie(key="session_token", value=result.session_token, httponly=True, max_age=3600 * 24 * 7, samesite="lax")
-        response.set_cookie(key="nickname", value=quote(result.nickname), max_age=3600 * 24 * 7, samesite="lax")
-        response.set_cookie(key="email", value=quote(result.email), max_age=3600 * 24 * 7, samesite="lax")
-        response.set_cookie(key="account_id", value=str(result.account_id), max_age=3600 * 24 * 7, samesite="lax")
+        response.set_cookie(key="session_token", value=result.session_token, httponly=True, secure=True, max_age=3600 * 24 * 7, samesite="lax")
+        response.set_cookie(key="nickname", value=quote(result.nickname), secure=True, max_age=3600 * 24 * 7, samesite="lax")
+        response.set_cookie(key="email", value=quote(result.email), secure=True, max_age=3600 * 24 * 7, samesite="lax")
+        response.set_cookie(key="account_id", value=str(result.account_id), secure=True, max_age=3600 * 24 * 7, samesite="lax")
         response.delete_cookie("temp_token")
         return response
 

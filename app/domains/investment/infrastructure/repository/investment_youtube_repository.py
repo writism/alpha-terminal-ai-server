@@ -37,7 +37,7 @@ def fetch_video_ids_by_company(company: str, max_logs: int = 3) -> list[str]:
         if not logs:
             logs = (
                 mysql_db.query(InvestmentYouTubeLogORM)
-                .filter(InvestmentYouTubeLogORM.company.like(f"%{company}%"))
+                .filter(InvestmentYouTubeLogORM.company.like("%{}%".format(company.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")), escape="\\"))
                 .order_by(InvestmentYouTubeLogORM.created_at.desc())
                 .limit(max_logs)
                 .all()

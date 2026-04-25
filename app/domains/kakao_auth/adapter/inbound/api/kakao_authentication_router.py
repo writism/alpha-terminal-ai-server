@@ -1,5 +1,8 @@
+import logging
 import secrets
 from urllib.parse import quote
+
+logger = logging.getLogger(__name__)
 
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import RedirectResponse
@@ -81,28 +84,31 @@ async def request_access_token_after_redirection(
         response = RedirectResponse(url=_settings.frontend_auth_callback_url)
 
         if result.is_registered and result.user_token:
-            response.set_cookie(key="user_token", value=result.user_token, httponly=True, max_age=3600 * 24 * 7, samesite="lax")
-            response.set_cookie(key="nickname", value=quote(result.nickname), max_age=3600 * 24 * 7, samesite="lax")
-            response.set_cookie(key="email", value=quote(result.email), max_age=3600 * 24 * 7, samesite="lax")
-            response.set_cookie(key="account_id", value=str(result.account_id), max_age=3600 * 24 * 7, samesite="lax")
+            response.set_cookie(key="user_token", value=result.user_token, httponly=True, secure=True, max_age=3600 * 24 * 7, samesite="lax")
+            response.set_cookie(key="nickname", value=quote(result.nickname), secure=True, max_age=3600 * 24 * 7, samesite="lax")
+            response.set_cookie(key="email", value=quote(result.email), secure=True, max_age=3600 * 24 * 7, samesite="lax")
+            response.set_cookie(key="account_id", value=str(result.account_id), secure=True, max_age=3600 * 24 * 7, samesite="lax")
 
         if result.temp_token_issued and result.temp_token:
             response.set_cookie(
                 key="temp_token",
                 value=result.temp_token,
                 httponly=True,
+                secure=True,
                 max_age=TEMP_TOKEN_TTL_SECONDS,
                 samesite="lax",
             )
             response.set_cookie(
                 key="kakao_nickname",
                 value=quote(result.nickname),
+                secure=True,
                 max_age=TEMP_TOKEN_TTL_SECONDS,
                 samesite="lax",
             )
             response.set_cookie(
                 key="kakao_email",
                 value=quote(result.email),
+                secure=True,
                 max_age=TEMP_TOKEN_TTL_SECONDS,
                 samesite="lax",
             )
@@ -110,9 +116,11 @@ async def request_access_token_after_redirection(
         return response
 
     except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        logger.warning("[KakaoAuth] 인증 처리 실패: %s", e)
+        raise HTTPException(status_code=400, detail="인증 처리에 실패했습니다.")
     except Exception as e:
-        raise HTTPException(status_code=502, detail=f"Kakao request failed: {e}")
+        logger.error("[KakaoAuth] 카카오 요청 오류", exc_info=True)
+        raise HTTPException(status_code=502, detail="일시적 오류가 발생했습니다. 잠시 후 다시 시도해주세요.")
 
 
 @router.get("/redirection", response_model=KakaoLoginResponse)
@@ -124,4 +132,5 @@ async def kakao_redirection(code: str = None, error: str = None, error_descripti
     try:
         return _kakao_login_usecase.execute(code)
     except Exception as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        logger.error("[KakaoRedirection] 로그인 처리 오류", exc_info=True)
+        raise HTTPException(status_code=400, detail="로그인 처리에 실패했습니다.")

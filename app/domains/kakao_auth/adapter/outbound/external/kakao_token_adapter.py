@@ -26,6 +26,7 @@ class KakaoTokenAdapter(KakaoTokenPort, RequestKakaoAccessTokenPort, KakaoUserIn
                 "code": code,
             },
             headers={"Content-Type": "application/x-www-form-urlencoded"},
+            timeout=10.0,
         )
         body = response.json()
         if response.status_code != 200 or "access_token" not in body:
@@ -52,6 +53,7 @@ class KakaoTokenAdapter(KakaoTokenPort, RequestKakaoAccessTokenPort, KakaoUserIn
         response = httpx.get(
             KAKAO_USER_INFO_URL,
             headers={"Authorization": f"Bearer {access_token}"},
+            timeout=10.0,
         )
         data = response.json()
         if response.status_code != 200:

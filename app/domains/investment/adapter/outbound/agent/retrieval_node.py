@@ -132,7 +132,7 @@ async def _handle_dashboard_analysis(keyword: str, company: Optional[str] = None
             # company명으로 symbol 조회
             stock_orm = db.query(StockORM).filter(StockORM.name == search_name).first()
             if not stock_orm:
-                stock_orm = db.query(StockORM).filter(StockORM.name.like(f"%{search_name}%")).first()
+                stock_orm = db.query(StockORM).filter(StockORM.name.like("%{}%".format(search_name.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")), escape="\\")).first()
 
             if not stock_orm:
                 return None, search_name
@@ -244,7 +244,7 @@ async def _handle_stock(keyword: str, company: Optional[str] = None) -> SourceRe
         try:
             orm = db.query(StockORM).filter(StockORM.name == search_name).first()
             if not orm:
-                orm = db.query(StockORM).filter(StockORM.name.like(f"%{search_name}%")).first()
+                orm = db.query(StockORM).filter(StockORM.name.like("%{}%".format(search_name.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")), escape="\\")).first()
             return orm
         finally:
             db.close()
@@ -335,7 +335,7 @@ async def _handle_price(keyword: str, company: Optional[str] = None) -> SourceRe
         try:
             orm = db.query(StockORM).filter(StockORM.name == search_name).first()
             if not orm:
-                orm = db.query(StockORM).filter(StockORM.name.like(f"%{search_name}%")).first()
+                orm = db.query(StockORM).filter(StockORM.name.like("%{}%".format(search_name.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")), escape="\\")).first()
             return orm
         finally:
             db.close()
