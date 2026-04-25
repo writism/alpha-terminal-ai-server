@@ -52,6 +52,8 @@ class Settings(BaseSettings):
     frontend_auth_callback_url: str = "http://localhost:3000/auth-callback"
     admin_secret_code: str = ""
     debug: bool = False
+    # HTTPS 환경이 아닌 경우 false로 설정 (예: HTTP 배포, 로컬 개발)
+    cookie_secure: bool = True
 
     model_config = {
         "env_file": ".env",

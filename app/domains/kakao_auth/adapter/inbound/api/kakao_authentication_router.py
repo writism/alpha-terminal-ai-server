@@ -83,32 +83,33 @@ async def request_access_token_after_redirection(
 
         response = RedirectResponse(url=_settings.frontend_auth_callback_url)
 
+        secure = _settings.cookie_secure
         if result.is_registered and result.user_token:
-            response.set_cookie(key="user_token", value=result.user_token, httponly=True, secure=True, max_age=3600 * 24 * 7, samesite="lax")
-            response.set_cookie(key="nickname", value=quote(result.nickname), secure=True, max_age=3600 * 24 * 7, samesite="lax")
-            response.set_cookie(key="email", value=quote(result.email), secure=True, max_age=3600 * 24 * 7, samesite="lax")
-            response.set_cookie(key="account_id", value=str(result.account_id), secure=True, max_age=3600 * 24 * 7, samesite="lax")
+            response.set_cookie(key="user_token", value=result.user_token, httponly=True, secure=secure, max_age=3600 * 24 * 7, samesite="lax")
+            response.set_cookie(key="nickname", value=quote(result.nickname), secure=secure, max_age=3600 * 24 * 7, samesite="lax")
+            response.set_cookie(key="email", value=quote(result.email), secure=secure, max_age=3600 * 24 * 7, samesite="lax")
+            response.set_cookie(key="account_id", value=str(result.account_id), secure=secure, max_age=3600 * 24 * 7, samesite="lax")
 
         if result.temp_token_issued and result.temp_token:
             response.set_cookie(
                 key="temp_token",
                 value=result.temp_token,
                 httponly=True,
-                secure=True,
+                secure=secure,
                 max_age=TEMP_TOKEN_TTL_SECONDS,
                 samesite="lax",
             )
             response.set_cookie(
                 key="kakao_nickname",
                 value=quote(result.nickname),
-                secure=True,
+                secure=secure,
                 max_age=TEMP_TOKEN_TTL_SECONDS,
                 samesite="lax",
             )
             response.set_cookie(
                 key="kakao_email",
                 value=quote(result.email),
-                secure=True,
+                secure=secure,
                 max_age=TEMP_TOKEN_TTL_SECONDS,
                 samesite="lax",
             )
