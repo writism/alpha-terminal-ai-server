@@ -98,7 +98,8 @@ def _lookup_symbol_by_name(company_name: str) -> Optional[str]:
     with session_scope() as db:
         orm = db.query(StockORM).filter(StockORM.name == company_name).first()
         if not orm:
-            orm = db.query(StockORM).filter(StockORM.name.like(f"%{company_name}%")).first()
+            escaped = company_name.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
+            orm = db.query(StockORM).filter(StockORM.name.like(f"%{escaped}%", escape="\\")).first()
         return orm.symbol if orm else None
 
 

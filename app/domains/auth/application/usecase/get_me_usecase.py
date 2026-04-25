@@ -1,8 +1,11 @@
+import logging
 from typing import Optional
 
 from app.domains.auth.application.response.me_response import MeResponse
 from app.domains.auth.application.usecase.session_store_port import SessionStorePort
 from app.domains.auth.application.usecase.temp_token_check_port import TempTokenCheckPort
+
+logger = logging.getLogger(__name__)
 
 
 class GetMeUseCase:
@@ -23,7 +26,7 @@ class GetMeUseCase:
         if user_token:
             session = self._session_store.find_by_token(user_token)
             if session:
-                print(f"[GetMe] user_token={user_token}, nickname={nickname}, email={email}, account_id={session.user_id}")
+                logger.debug("[GetMe] session found account_id=%s token_prefix=%s...", session.user_id, user_token[:8])
                 return MeResponse(
                     is_registered=True,
                     email=email or "",
@@ -32,7 +35,7 @@ class GetMeUseCase:
                 )
 
         if temp_token and self._temp_token_check.exists(temp_token):
-            print(f"[GetMe] temp_token={temp_token}, nickname={kakao_nickname}, email={kakao_email}")
+            logger.debug("[GetMe] temp_token found prefix=%s...", temp_token[:8])
             return MeResponse(
                 is_registered=False,
                 email=kakao_email or "",

@@ -75,7 +75,7 @@ async def sync_corp_codes(db: Session = Depends(get_db)):
         return {"synced": count}
     except Exception as e:
         logger.error(f"[SyncCorpCode] 실패: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="서버 오류가 발생했습니다.")
 
 
 @router.get("/sync-market", response_model=dict)
@@ -87,7 +87,7 @@ async def sync_market(db: Session = Depends(get_db)):
         return {"updated": count}
     except Exception as e:
         logger.error(f"[SyncMarket] 실패: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="서버 오류가 발생했습니다.")
 
 
 @router.get("/{symbol}", response_model=StockDetailResponse)
