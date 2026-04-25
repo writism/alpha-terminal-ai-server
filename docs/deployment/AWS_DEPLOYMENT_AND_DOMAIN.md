@@ -1,5 +1,10 @@
 # Alpha Desk — AWS 배포 및 도메인 연결 가이드
 
+> **실제 운영 구성 문서**: [AWS_EC2_HTTPS_RUNBOOK.md](./AWS_EC2_HTTPS_RUNBOOK.md)  
+> 이 문서는 일반 옵션 개요이며, 실제 alpha-desk에 적용된 구성(DuckDNS + Let's Encrypt + nginx)은 위 Runbook을 참고한다.
+
+---
+
 > **대상 스택(가정):** Next.js 프론트엔드, FastAPI 백엔드(`alpha-desk-ai-server`), MySQL, Redis, 외부 API·OAuth 콜백 URL 의존.
 
 이 문서는 **처음 AWS에 올려볼 때의 절차**와 **도메인을 사서(또는 무료에 가깝게) 연결하는 흐름**을 순서대로 정리한 보고용 자료입니다. 실제 비용·한도는 AWS 및 등록기관 정책이 바뀔 수 있으므로, 작업 전에 각 서비스 공식 가격·무료 범위를 한 번 더 확인하세요.

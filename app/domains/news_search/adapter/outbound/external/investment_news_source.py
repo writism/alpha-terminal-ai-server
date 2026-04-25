@@ -23,6 +23,28 @@ CONTENT_PREVIEW_CHARS = 800  # retrieval_data 에 포함할 본문 미리보기 
 NEWS_PAGE_SIZE = 5
 
 
+async def _fetch_naver_news_fallback(keyword: str) -> tuple:
+    """SERP 실패·빈 결과 시 네이버 뉴스 검색으로 fallback한다.
+
+    Returns:
+        (articles, total) 또는 ([], 0)
+    """
+    from app.domains.news_search.adapter.outbound.external.naver_news_search_adapter import NaverNewsSearchAdapter
+    loop = asyncio.get_event_loop()
+    try:
+        adapter = NaverNewsSearchAdapter()
+        articles, total = await loop.run_in_executor(
+            None,
+            lambda: adapter.search(keyword=keyword, page=1, page_size=NEWS_PAGE_SIZE),
+        )
+        await aemit(f"[InvestmentNews][Naver] ◀ fallback {len(articles)}건 수집")
+        return articles, total
+    except Exception:
+        await aemit("[InvestmentNews][Naver] ✗ fallback 실패")
+        traceback.print_exc()
+        return [], 0
+
+
 def _save_to_db(articles_data: list) -> dict:
     """MySQL + PostgreSQL 저장 (동기 — executor 에서 호출).
 
@@ -139,13 +161,18 @@ async def fetch_and_store_investment_news(
             lambda: adapter.search(keyword=effective_keyword, page=1, page_size=page_size),
         )
     except Exception:
-        await aemit("[InvestmentNews] ✗ SERP 검색 실패")
+        await aemit("[InvestmentNews] ✗ SERP 검색 실패 → 네이버 뉴스 fallback 시도")
         traceback.print_exc()
-        return "=== 투자 뉴스 수집 실패 ===", {}
+        articles, total = await _fetch_naver_news_fallback(effective_keyword)
+        if not articles:
+            return "=== 투자 뉴스 수집 실패 ===", {}
 
     if not articles:
-        await aemit("[InvestmentNews] ⚠ 검색 결과 없음")
-        return "=== 투자 뉴스: 결과 없음 ===", {}
+        await aemit("[InvestmentNews] ⚠ SERP 결과 없음 → 네이버 뉴스 fallback 시도")
+        articles, total = await _fetch_naver_news_fallback(effective_keyword)
+        if not articles:
+            await aemit("[InvestmentNews] ⚠ 네이버 뉴스도 없음")
+            return "=== 투자 뉴스: 결과 없음 ===", {}
 
     await aemit(f"[InvestmentNews]   {total}건 중 {len(articles)}건 → 본문 추출 시작")
 

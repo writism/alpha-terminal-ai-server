@@ -29,6 +29,8 @@ class InvestmentAgentState(TypedDict):
     retrieved_data: Optional[str]
     news_signal: Optional[dict]         # NewsSentimentMetrics
     youtube_signal: Optional[dict]      # YouTubeSentimentMetrics
+    price_signal: Optional[dict]        # Finnhub 현재 주가 신호 (current_price, change_pct 등)
+    financial_signal: Optional[dict]    # DART 재무 신호 (operating_margin, debt_ratio 등)
     investment_verdict: Optional[dict]  # InvestmentDecision
     analysis: Optional[str]
     final_answer: Optional[str]

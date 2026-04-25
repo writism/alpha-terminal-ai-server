@@ -179,12 +179,55 @@ async def _handle_dashboard_analysis(keyword: str, company: Optional[str] = None
     return result_text, None
 
 
+def _extract_financial_signal(body_text: str, period: str) -> Optional[dict]:
+    """재무제표 본문 텍스트에서 구조화된 투자 신호를 추출한다."""
+    import re
+
+    def _to_billion(s: str) -> Optional[float]:
+        s = s.strip()
+        try:
+            if "조원" in s:
+                return float(s.replace("조원", "").replace(",", "")) * 10000
+            elif "억원" in s:
+                return float(s.replace("억원", "").replace(",", ""))
+            elif "원" in s:
+                return float(s.replace("원", "").replace(",", "")) / 1e8
+        except Exception:
+            return None
+        return None
+
+    def extract(label: str) -> Optional[float]:
+        m = re.search(rf"- {label}: ([^(\n]+?) \(전기:", body_text)
+        return _to_billion(m.group(1).strip()) if m else None
+
+    assets = extract("자산총계")
+    liabilities = extract("부채총계")
+    margin_m = re.search(r"영업이익률: (-?[\d.]+)%", body_text)
+    margin = float(margin_m.group(1)) if margin_m else None
+
+    debt_ratio: Optional[float] = None
+    if assets and liabilities and assets > 0:
+        debt_ratio = round(liabilities / assets * 100, 1)
+
+    if margin is None and debt_ratio is None:
+        return None
+
+    return {
+        "operating_margin": margin,
+        "debt_ratio": debt_ratio,
+        "assets_billion": assets,
+        "liabilities_billion": liabilities,
+        "period": period,
+    }
+
+
 async def _handle_stock(keyword: str, company: Optional[str] = None) -> SourceResult:
-    """[Retrieval][종목] DART 재무제표 + 공시 수집.
+    """[Retrieval][종목] DART 재무제표 + 공시 수집 + 재무 신호 추출.
 
     흐름:
         stocks DB에서 종목명으로 corp_code 조회
         → DartReportCollectorAdapter(재무제표) + DartCollectorAdapter(공시) 병렬 수집
+        → 재무제표 본문에서 financial_signal 추출
     """
     from app.domains.stock.infrastructure.orm.stock_orm import StockORM
     from app.infrastructure.database.session import SessionLocal
@@ -230,11 +273,26 @@ async def _handle_stock(keyword: str, company: Optional[str] = None) -> SourceRe
     )
 
     lines = [f"=== 종목 정보: {stock_name}({symbol}) ==="]
+    financial_signal: Optional[dict] = None
 
     if financial_articles:
         for a in financial_articles:
             lines.append(f"\n{a.body_text}")
         await aemit(f"[Retrieval][종목] ✓ 재무제표 {len(financial_articles)}건")
+        # 재무 신호 추출
+        try:
+            article = financial_articles[0]
+            period = (article.meta or {}).get("period", "")
+            financial_signal = _extract_financial_signal(article.body_text, period)
+            if financial_signal:
+                await aemit(
+                    f"[Retrieval][종목] ✓ 재무 신호: "
+                    f"영업이익률={financial_signal.get('operating_margin')}% "
+                    f"부채비율={financial_signal.get('debt_ratio')}%"
+                )
+        except Exception:
+            await aemit(f"[Retrieval][종목] ✗ 재무 신호 추출 실패 (텍스트 결과는 유지)")
+            traceback.print_exc()
     else:
         lines.append("\n[재무제표] 데이터 없음")
         await aemit(f"[Retrieval][종목] ⚠ 재무제표 없음")
@@ -250,7 +308,93 @@ async def _handle_stock(keyword: str, company: Optional[str] = None) -> SourceRe
 
     result_text = "\n".join(lines)
     await aemit(f"[Retrieval][종목] ◀ 완료 | {len(result_text)}자")
-    return result_text, None
+    return result_text, financial_signal
+
+
+async def _handle_price(keyword: str, company: Optional[str] = None) -> SourceResult:
+    """[Retrieval][현재가] Finnhub API로 현재 주가·등락률을 조회한다.
+
+    FINNHUB_API_KEY 미설정 시 조용히 빈 결과를 반환한다.
+    """
+    import httpx
+    from app.domains.stock.infrastructure.orm.stock_orm import StockORM
+    from app.infrastructure.database.session import SessionLocal
+
+    search_name = company or keyword
+    await aemit(f"[Retrieval][현재가] ▶ 시작 | keyword={search_name}")
+
+    settings = get_settings()
+    if not settings.finnhub_api_key:
+        await aemit(f"[Retrieval][현재가] ⚠ FINNHUB_API_KEY 미설정 — 건너뜀")
+        return "", None
+
+    loop = asyncio.get_event_loop()
+
+    def _lookup():
+        db = SessionLocal()
+        try:
+            orm = db.query(StockORM).filter(StockORM.name == search_name).first()
+            if not orm:
+                orm = db.query(StockORM).filter(StockORM.name.like(f"%{search_name}%")).first()
+            return orm
+        finally:
+            db.close()
+
+    stock_orm = await loop.run_in_executor(None, _lookup)
+    if not stock_orm:
+        await aemit(f"[Retrieval][현재가] ⚠ 종목 미등록: {search_name}")
+        return "", None
+
+    symbol = stock_orm.symbol
+    market = (stock_orm.market or "").upper()
+    finnhub_symbol = f"{symbol}.KQ" if "KOSDAQ" in market else f"{symbol}.KS"
+
+    def _fetch_quote():
+        resp = httpx.get(
+            "https://finnhub.io/api/v1/quote",
+            params={"symbol": finnhub_symbol, "token": settings.finnhub_api_key},
+            timeout=10.0,
+        )
+        resp.raise_for_status()
+        return resp.json()
+
+    try:
+        data = await loop.run_in_executor(None, _fetch_quote)
+    except Exception:
+        await aemit(f"[Retrieval][현재가] ✗ Finnhub API 실패: {finnhub_symbol}")
+        traceback.print_exc()
+        return "", None
+
+    current = data.get("c", 0)
+    if not current:
+        await aemit(f"[Retrieval][현재가] ⚠ 유효한 시세 없음: {finnhub_symbol}")
+        return "", None
+
+    prev_close = data.get("pc", 0)
+    change = data.get("d", 0)
+    change_pct = data.get("dp", 0.0)
+    high = data.get("h", 0)
+    low = data.get("l", 0)
+
+    price_signal = {
+        "current_price": current,
+        "prev_close": prev_close,
+        "change": change,
+        "change_pct": change_pct,
+        "high": high,
+        "low": low,
+        "symbol": symbol,
+    }
+
+    arrow = "▲" if change_pct >= 0 else "▼"
+    text = (
+        f"=== 현재 주가: {stock_orm.name}({symbol}) ===\n"
+        f"현재가: {current:,.0f}원 ({arrow}{abs(change_pct):.2f}%)\n"
+        f"전일종가: {prev_close:,.0f}원 | 고가: {high:,.0f}원 | 저가: {low:,.0f}원"
+    )
+
+    await aemit(f"[Retrieval][현재가] ◀ 완료 | {current:,.0f}원 ({change_pct:+.2f}%)")
+    return text, price_signal
 
 
 # ---------------------------------------------------------------------------
@@ -263,6 +407,7 @@ SOURCE_REGISTRY: dict[str, SourceFactory] = {
     "뉴스":         lambda kw, q, c: _handle_news(kw, c),
     "YouTube 영상": lambda kw, q, c: _handle_youtube(kw, q, c),
     "종목":         lambda kw, q, c: _handle_stock(kw, c),
+    "현재가":       lambda kw, q, c: _handle_price(kw, c),
     "대시보드 분석": lambda kw, q, c: _handle_dashboard_analysis(kw, c),
 }
 
@@ -358,4 +503,6 @@ async def retrieval_node(state: InvestmentAgentState) -> dict:
         "retrieved_data": retrieved_data,
         "news_signal": signals.get("뉴스"),
         "youtube_signal": signals.get("YouTube 영상"),
+        "price_signal": signals.get("현재가"),
+        "financial_signal": signals.get("종목"),
     }
