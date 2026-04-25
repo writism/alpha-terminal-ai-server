@@ -108,12 +108,15 @@ async def explain_term(request: ExplainTermRequest):
 
 
 @router.post("/agent-graph/run", response_model=AgentGraphResponse)
-async def run_agent_graph(request: AgentGraphRequest):
-    """LangGraph 멀티 에이전트 그래프 실행 (스모크 테스트 겸 진입점).
-
-    Planner → Analyst → Reviewer 순으로 실행되며,
-    Reviewer 검토 실패 시 Analyst를 최대 2회 재실행한다.
-    """
+async def run_agent_graph(
+    request: AgentGraphRequest,
+    account_id: Optional[str] = Cookie(default=None),
+    user_token: Optional[str] = Cookie(default=None),
+):
+    """LangGraph 멀티 에이전트 그래프 실행."""
+    aid = _resolve_account_id(account_id, user_token)
+    if aid is None:
+        raise HTTPException(status_code=401, detail="로그인이 필요합니다.")
     from app.infrastructure.langgraph.graph_builder import run_graph
     try:
         result = await run_graph(request.query)

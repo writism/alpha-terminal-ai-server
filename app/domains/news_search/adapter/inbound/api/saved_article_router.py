@@ -100,7 +100,10 @@ async def analyze_article(
     article_id: int,
     db: Session = Depends(get_db),
     pg_db: Session = Depends(get_pg_db),
+    account_id: Optional[str] = Cookie(default=None),
 ):
+    if account_id is None:
+        raise HTTPException(status_code=401, detail="인증이 필요합니다.")
     repository = SavedArticleRepositoryImpl(db)
     content_store = ArticleContentStoreImpl(pg_db)
     usecase = AnalyzeArticleUseCase(repository, _analysis_adapter, content_store)
@@ -117,7 +120,9 @@ async def bulk_analyze(
     pg_db: Session = Depends(get_pg_db),
     account_id: Optional[str] = Cookie(default=None),
 ):
-    parsed_account_id = int(account_id) if account_id else None
+    if account_id is None:
+        raise HTTPException(status_code=401, detail="인증이 필요합니다.")
+    parsed_account_id = int(account_id)
     usecase = BulkAnalyzeUseCase(
         news_search_port=SerpNewsSearchAdapter(),
         repository=SavedArticleRepositoryImpl(db),
