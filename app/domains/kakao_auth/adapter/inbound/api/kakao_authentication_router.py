@@ -81,10 +81,10 @@ async def request_access_token_after_redirection(
         response = RedirectResponse(url=_settings.frontend_auth_callback_url)
 
         if result.is_registered and result.user_token:
-            response.set_cookie(key="user_token", value=result.user_token, httponly=True, max_age=3600 * 24 * 7, samesite="lax")
-            response.set_cookie(key="nickname", value=quote(result.nickname), max_age=3600 * 24 * 7, samesite="lax")
-            response.set_cookie(key="email", value=quote(result.email), max_age=3600 * 24 * 7, samesite="lax")
-            response.set_cookie(key="account_id", value=str(result.account_id), max_age=3600 * 24 * 7, samesite="lax")
+            response.set_cookie(key="user_token", value=result.user_token, httponly=True, max_age=3600 * 24 * 7, samesite="lax", secure=True)
+            response.set_cookie(key="nickname", value=quote(result.nickname), max_age=3600 * 24 * 7, samesite="lax", secure=True)
+            response.set_cookie(key="email", value=quote(result.email), max_age=3600 * 24 * 7, samesite="lax", secure=True)
+            response.set_cookie(key="account_id", value=str(result.account_id), max_age=3600 * 24 * 7, samesite="lax", secure=True)
 
         if result.temp_token_issued and result.temp_token:
             response.set_cookie(
@@ -93,18 +93,21 @@ async def request_access_token_after_redirection(
                 httponly=True,
                 max_age=TEMP_TOKEN_TTL_SECONDS,
                 samesite="lax",
+                secure=True,
             )
             response.set_cookie(
                 key="kakao_nickname",
                 value=quote(result.nickname),
                 max_age=TEMP_TOKEN_TTL_SECONDS,
                 samesite="lax",
+                secure=True,
             )
             response.set_cookie(
                 key="kakao_email",
                 value=quote(result.email),
                 max_age=TEMP_TOKEN_TTL_SECONDS,
                 samesite="lax",
+                secure=True,
             )
 
         return response
