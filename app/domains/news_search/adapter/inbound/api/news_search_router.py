@@ -9,6 +9,8 @@ from app.domains.news_search.adapter.outbound.external.naver_news_search_adapter
 from app.domains.news_search.adapter.outbound.external.serp_news_search_adapter import SerpNewsSearchAdapter
 from app.domains.news_search.application.response.search_news_response import SearchNewsResponse
 from app.domains.news_search.application.usecase.search_news_usecase import SearchNewsUseCase
+from app.infrastructure.cache.redis_client import redis_client
+from app.infrastructure.cache.news_redis_cache import get_news_cache, set_news_cache
 
 router = APIRouter(prefix="/news", tags=["news"])
 
@@ -30,6 +32,13 @@ async def search_news(
     page_size: int = Query(default=10, ge=1, le=100),
     market: Optional[str] = Query(default=None, description="US | KR"),
 ):
+    cached = get_news_cache(redis_client, keyword, market, page, page_size)
+    if cached is not None:
+        return SearchNewsResponse(**cached)
+
     adapter = _build_adapter(market)
     usecase = SearchNewsUseCase(adapter)
-    return await run_in_threadpool(usecase.execute, keyword, page, page_size)
+    result: SearchNewsResponse = await run_in_threadpool(usecase.execute, keyword, page, page_size)
+
+    set_news_cache(redis_client, keyword, market, page, page_size, result.model_dump())
+    return result
