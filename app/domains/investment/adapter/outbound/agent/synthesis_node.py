@@ -72,10 +72,10 @@ def _build_system_prompt() -> str:
         "당신은 투자 정보 종합 에이전트입니다.\n"
         "아래 구조화된 투자 판단 결과를 바탕으로 사용자 친화적인 한국어 응답을 작성하세요.\n\n"
         "작성 규칙:\n"
-        "- 아래 제공된 verdict(결론)를 첫 문단에 반드시 명시하세요. 완곡하거나 모호하게 표현하지 마세요.\n"
-        "- reasons.positive / reasons.negative / risk_factors 에 제시된 내용만 근거로 사용하세요. "
-        "  새로운 근거를 임의로 만들지 마세요.\n"
-        "- direction, confidence 수치는 변경하지 마세요.\n"
+        "- verdict(결론)를 첫 문단에 자연스럽게 녹여 쓰세요. 완곡하거나 모호하게 표현하지 마세요.\n"
+        "- reasons.positive / reasons.negative / risk_factors 에 제시된 내용을 근거로 사용하세요.\n"
+        "- direction, confidence, verdict 같은 내부 필드명과 수치를 응답에 그대로 출력하지 마세요.\n"
+        "  예: 'direction: neutral', 'confidence: 0.300' 같은 표현 금지.\n"
         "- 2~4개 문단으로 구성하세요: 결론 → 긍정 근거 → 부정/리스크 → (필요시 추가)\n"
         "- 한국어 자연스러운 서술형으로 작성하세요.\n"
         "- 응답 말미에 면책 문구가 자동으로 추가되므로 직접 쓰지 마세요."
@@ -103,9 +103,9 @@ def _build_human_prompt(
         f"사용자 질문: {query}\n"
         f"종목: {company or '미지정'}\n\n"
         f"=== 투자 판단 결과 (변경 금지) ===\n"
-        f"verdict     : {verdict_kr} ({verdict_kr})\n"
-        f"direction   : {direction}\n"
-        f"confidence  : {confidence:.3f} ({conf_label})\n\n"
+        f"결론     : {verdict_kr}\n"
+        f"방향성   : {'상승' if direction == 'bullish' else '하락' if direction == 'bearish' else '중립'}\n"
+        f"확신도   : {conf_label}\n\n"
         f"=== 긍정 근거 (이 내용만 사용) ===\n"
         + ("\n".join(f"- {r}" for r in positive_reasons) or "- 없음") + "\n\n"
         f"=== 부정 근거 (이 내용만 사용) ===\n"
@@ -181,15 +181,28 @@ async def synthesis_node(state: InvestmentAgentState) -> dict:
         )
 
         await aemit(f"[Synthesis] → LLM 응답 생성 중 (verdict={verdict_kr}, conf={confidence:.3f})...")
-        messages = [SystemMessage(content=system_msg), HumanMessage(content=human_msg)]
-        response = await llm.ainvoke(messages)
-        body = response.content.strip()
 
-        # 신호 부족 hold → 보수적 안내 문구 삽입
         if is_low_confidence_hold:
-            body += _SIGNAL_SHORTAGE_NOTE
+            # 신호 부족 → LLM 일반 지식 기반 직접 답변
+            general_system = (
+                "당신은 투자 정보 분석 전문가입니다.\n"
+                "실시간 데이터가 충분하지 않은 상황에서, 질문에 대해 일반적인 시장 지식과 "
+                "해당 기업·산업에 대한 맥락을 바탕으로 균형 잡힌 분석을 제공하세요.\n\n"
+                "작성 규칙:\n"
+                "- 질문에 직접적으로 답하세요. '데이터 없음'으로 회피하지 마세요.\n"
+                "- 긍정적 가능성과 부정적 리스크를 모두 언급하세요.\n"
+                "- 실시간 데이터가 아닌 일반 지식 기반임을 자연스럽게 한 줄로만 안내하세요.\n"
+                "- 수치 예측은 단정하지 말고 조건부로 서술하세요.\n"
+                "- 3~4 문단, 자연스러운 한국어 서술형으로 작성하세요.\n"
+                "- 응답 말미에 면책 문구가 자동으로 추가되므로 직접 쓰지 마세요."
+            )
+            general_human = f"사용자 질문: {query}\n종목: {company or '미지정'}\n\n위 질문에 답하세요."
+            messages = [SystemMessage(content=general_system), HumanMessage(content=general_human)]
+        else:
+            messages = [SystemMessage(content=system_msg), HumanMessage(content=human_msg)]
 
-        final_answer = body + _DISCLAIMER
+        response = await llm.ainvoke(messages)
+        final_answer = response.content.strip() + _DISCLAIMER
 
     # -------------------------------------------------------------------------
     # Case B: investment_verdict 없음 → analysis 텍스트 fallback

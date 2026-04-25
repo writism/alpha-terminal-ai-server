@@ -30,12 +30,16 @@ async def analysis_node(state: InvestmentAgentState) -> dict:
 
     news_signal = state.get("news_signal")
     youtube_signal = state.get("youtube_signal")
+    price_signal = state.get("price_signal")
+    financial_signal = state.get("financial_signal")
 
     await aemit(f"[Analysis] ▶ 시작 | query={query[:60]}")
     await aemit(
         f"[Analysis]   수집 데이터 {len(retrieved_data)}자 | "
-        f"news_signal={'있음' if news_signal else '없음'} | "
-        f"youtube_signal={'있음' if youtube_signal else '없음'}"
+        f"news={'있음' if news_signal else '없음'} | "
+        f"youtube={'있음' if youtube_signal else '없음'} | "
+        f"price={'있음' if price_signal else '없음'} | "
+        f"financial={'있음' if financial_signal else '없음'}"
     )
 
     # --- 1. Deterministic 투자 판단 (rule engine + LLM rationale) ---
@@ -44,6 +48,8 @@ async def analysis_node(state: InvestmentAgentState) -> dict:
         youtube_signal=youtube_signal,
         company=company,
         intent=intent,
+        price_signal=price_signal,
+        financial_signal=financial_signal,
     )
 
     # --- 2. LLM 심층 분석 ---
