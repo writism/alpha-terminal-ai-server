@@ -2,7 +2,7 @@ import asyncio
 import json
 from typing import Optional
 
-from fastapi import APIRouter, Cookie, Depends, Header, HTTPException
+from fastapi import APIRouter, Cookie, Depends, HTTPException
 from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 
@@ -31,14 +31,7 @@ _session_adapter = RedisSessionAdapter(redis_client)
 def _resolve_account_id(
     account_id_cookie: Optional[str],
     user_token: Optional[str],
-    x_account_id: Optional[str] = None,
 ) -> Optional[int]:
-    # Swagger UI 테스트용 헤더 (X-Account-Id) 우선 확인
-    if x_account_id:
-        try:
-            return int(x_account_id)
-        except ValueError:
-            pass
     if account_id_cookie:
         try:
             return int(account_id_cookie)
@@ -59,7 +52,6 @@ async def investment_decision(
     request: InvestmentDecisionRequest,
     account_id: Optional[str] = Cookie(default=None),
     user_token: Optional[str] = Cookie(default=None),
-    x_account_id: Optional[str] = Header(default=None),
     db: Session = Depends(get_pg_db),
 ):
     """인증된 사용자의 투자 판단 질의를 LangGraph 멀티 에이전트로 처리한다.
@@ -67,7 +59,7 @@ async def investment_decision(
     force=False(기본)이면 1시간 이내 캐시된 결과를 즉시 반환한다.
     force=True이면 캐시를 무시하고 파이프라인을 재실행한다.
     """
-    aid = _resolve_account_id(account_id, user_token, x_account_id)
+    aid = _resolve_account_id(account_id, user_token)
     if aid is None:
         raise HTTPException(status_code=401, detail="로그인이 필요합니다.")
 
@@ -134,7 +126,6 @@ async def investment_decision_stream(
     request: InvestmentDecisionRequest,
     account_id: Optional[str] = Cookie(default=None),
     user_token: Optional[str] = Cookie(default=None),
-    x_account_id: Optional[str] = Header(default=None),
 ):
     """인증된 사용자의 투자 판단 질의를 SSE 스트림으로 처리한다.
 
@@ -149,7 +140,7 @@ async def investment_decision_stream(
         {"type": "error",  "data": "오류 메시지"}
         {"type": "end"}
     """
-    aid = _resolve_account_id(account_id, user_token, x_account_id)
+    aid = _resolve_account_id(account_id, user_token)
     if aid is None:
         raise HTTPException(status_code=401, detail="로그인이 필요합니다.")
 
