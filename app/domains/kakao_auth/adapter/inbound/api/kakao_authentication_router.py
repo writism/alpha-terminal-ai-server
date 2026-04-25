@@ -1,3 +1,4 @@
+import secrets
 from urllib.parse import quote
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -16,7 +17,6 @@ from app.domains.kakao_auth.adapter.outbound.in_memory.redis_temp_token_adapter 
 )
 from app.domains.kakao_auth.application.response.kakao_login_response import KakaoLoginResponse
 from app.domains.kakao_auth.application.usecase.check_kakao_user_registration_usecase import CheckKakaoUserRegistrationUseCase
-from app.domains.kakao_auth.application.usecase.generate_kakao_oauth_url_usecase import GenerateKakaoOAuthUrlUseCase
 from app.domains.kakao_auth.application.usecase.kakao_login_usecase import KakaoLoginUseCase
 from app.infrastructure.cache.redis_client import redis_client
 from app.infrastructure.config.settings import get_settings
@@ -30,8 +30,6 @@ _kakao_oauth_adapter = KakaoOAuthAdapter(
     client_id=_settings.kakao_client_id,
     redirect_uri=_settings.kakao_redirect_uri,
 )
-_generate_url_usecase = GenerateKakaoOAuthUrlUseCase(_kakao_oauth_adapter)
-
 _kakao_token_adapter = KakaoTokenAdapter(
     client_id=_settings.kakao_client_id,
     redirect_uri=_settings.kakao_redirect_uri,
@@ -43,15 +41,21 @@ _kakao_session_store = RedisAccountSessionAdapter(redis_client)
 _kakao_token_link = RedisKakaoTokenAdapter(redis_client)
 
 
+_OAUTH_STATE_TTL = 600  # 10분
+
+
 @router.get("/request-oauth-link")
 async def request_oauth_link():
-    response = _generate_url_usecase.execute()
-    return RedirectResponse(url=response.authorization_url)
+    state = secrets.token_urlsafe(32)
+    redis_client.setex(f"oauth_state:{state}", _OAUTH_STATE_TTL, "1")
+    url = _kakao_oauth_adapter.generate(state=state)
+    return RedirectResponse(url=url)
 
 
 @router.get("/request-access-token-after-redirection")
 async def request_access_token_after_redirection(
     code: str = None,
+    state: str = None,
     error: str = None,
     error_description: str = None,
     db: Session = Depends(get_db),
@@ -60,6 +64,9 @@ async def request_access_token_after_redirection(
         raise HTTPException(status_code=400, detail=f"Kakao OAuth error: {error} - {error_description}")
     if not code:
         raise HTTPException(status_code=400, detail="Authorization code is missing")
+    # CSRF 방지: state 검증
+    if not state or not redis_client.getdel(f"oauth_state:{state}"):
+        raise HTTPException(status_code=400, detail="유효하지 않은 state 파라미터입니다.")
     try:
         usecase = CheckKakaoUserRegistrationUseCase(
             token_port=_kakao_token_adapter,

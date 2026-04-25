@@ -4,6 +4,7 @@ from typing import Optional, List
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 
+from app.infrastructure.auth.require_admin import require_admin
 from app.domains.stock_collector.adapter.outbound.external.dart_collector_adapter import DartCollectorAdapter
 from app.domains.stock_collector.adapter.outbound.external.dart_report_collector_adapter import DartReportCollectorAdapter
 from app.domains.stock_collector.adapter.outbound.external.google_news_rss_collector_adapter import GoogleNewsRssCollectorAdapter
@@ -46,7 +47,10 @@ async def collect_articles(request: CollectRequest, db: Session = Depends(get_db
 
 
 @router.post("/admin/migrate-symbols")
-async def migrate_symbols(db: Session = Depends(get_db)):
+async def migrate_symbols(
+    db: Session = Depends(get_db),
+    _: str = Depends(require_admin),
+):
     """DB에 한글 종목명으로 저장된 symbol을 종목 코드로 일괄 업데이트한다."""
     repository = RawArticleRepositoryImpl(db)
     results = {}

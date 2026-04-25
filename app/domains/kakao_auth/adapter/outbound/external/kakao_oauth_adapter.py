@@ -13,9 +13,9 @@ class KakaoOAuthAdapter(GenerateKakaoOAuthUrlPort):
         self._client_id = client_id
         self._redirect_uri = redirect_uri
 
-    def generate(self) -> str:
+    def generate(self, state: str | None = None) -> str:
         params = KakaoOAuthParams(
             client_id=self._client_id,
             redirect_uri=self._redirect_uri,
         )
-        return KakaoOAuthUrl(params=params).build()
+        return KakaoOAuthUrl(params=params).build(state=state)
