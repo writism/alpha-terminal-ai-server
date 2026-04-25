@@ -246,7 +246,6 @@ async def youtube_sentiment_analysis(
     request: YouTubeSentimentRequest,
     account_id: Optional[str] = Cookie(default=None),
     user_token: Optional[str] = Cookie(default=None),
-    x_account_id: Optional[str] = Header(default=None),
 ):
     """저장된 YouTube 댓글로 투자 심리 지표를 산출한다.
 
@@ -254,10 +253,8 @@ async def youtube_sentiment_analysis(
     - log_id : investment_youtube_logs.id로 특정 수집 세션 댓글 조회
 
     둘 중 하나는 반드시 지정해야 한다. log_id 가 지정되면 company 보다 우선한다.
-
-    **Swagger 테스트**: x-account-id 헤더에 임의 숫자(예: 1) 입력
     """
-    aid = _resolve_account_id(account_id, user_token, x_account_id)
+    aid = _resolve_account_id(account_id, user_token)
     if aid is None:
         raise HTTPException(status_code=401, detail="로그인이 필요합니다.")
 
