@@ -54,8 +54,8 @@ class Settings(BaseSettings):
     # LangGraph 멀티 에이전트 그래프 전용 모델
     langgraph_model: str = "gpt-4.1-mini"
     youtube_api_key: str = ""
-    cors_allowed_frontend_url: str = "http://3.36.11.81/:3000"
-    frontend_auth_callback_url: str = "http://3.36.11.81:3000/auth-callback"
+    cors_allowed_frontend_url: str = "https://alphaterminal.duckdns.org"
+    frontend_auth_callback_url: str = "https://alphaterminal.duckdns.org/auth-callback"
     admin_secret_code: str = ""
     debug: bool = False
 
