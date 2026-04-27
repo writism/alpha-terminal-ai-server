@@ -411,3 +411,4 @@ pyrightconfig.json
 
 # Claude Code personal tools (not shared with team)
 .claude/
+.env.bak

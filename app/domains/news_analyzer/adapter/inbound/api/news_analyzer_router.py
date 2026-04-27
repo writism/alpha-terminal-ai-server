@@ -1,4 +1,6 @@
-from fastapi import APIRouter, Depends, HTTPException
+from typing import Optional
+
+from fastapi import APIRouter, Cookie, Depends, HTTPException
 from sqlalchemy.orm import Session
 
 from app.domains.news_analyzer.adapter.outbound.external.openai_analysis_adapter import OpenAIAnalysisAdapter
@@ -14,7 +16,14 @@ router = APIRouter(prefix="/news-analyzer", tags=["news-analyzer"])
 
 
 @router.post("/analyze", response_model=AnalyzeArticleResponse)
-async def analyze_article(request: AnalyzeArticleRequest, db: Session = Depends(get_db)):
+async def analyze_article(
+    request: AnalyzeArticleRequest,
+    db: Session = Depends(get_db),
+    account_id: Optional[str] = Cookie(default=None),
+    user_token: Optional[str] = Cookie(default=None),
+):
+    if not account_id and not user_token:
+        raise HTTPException(status_code=401, detail="로그인이 필요합니다.")
     settings = get_settings()
     article_query = SavedArticleQueryImpl(db)
     analyzer = OpenAIAnalysisAdapter(api_key=settings.openai_api_key)

@@ -175,6 +175,12 @@ async def update_board(
         raise HTTPException(status_code=401, detail="로그인이 필요합니다.")
 
     board_repository = BoardRepositoryImpl(db)
+    board = board_repository.find_by_id(board_id)
+    if board is None:
+        raise HTTPException(status_code=404, detail="게시물을 찾을 수 없습니다.")
+    if board.account_id != int(account_id):
+        raise HTTPException(status_code=403, detail="수정 권한이 없습니다.")
+
     account_repository = AccountRepositoryImpl(db)
     usecase = UpdateBoardUseCase(board_repository, account_repository)
     result = usecase.execute(board_id, request.title, request.content)

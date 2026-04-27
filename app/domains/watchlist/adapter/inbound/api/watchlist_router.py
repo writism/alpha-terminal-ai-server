@@ -6,6 +6,7 @@ from sqlalchemy.orm import Session
 from app.domains.auth.adapter.outbound.in_memory.redis_session_adapter import RedisSessionAdapter
 from app.domains.watchlist.adapter.outbound.persistence.watchlist_repository_impl import WatchlistRepositoryImpl
 from app.domains.watchlist.application.request.add_watchlist_request import AddWatchlistRequest
+from app.domains.watchlist.infrastructure.orm.watchlist_item_orm import WatchlistItemORM
 from app.domains.watchlist.application.response.watchlist_response import WatchlistItemResponse
 from app.domains.watchlist.application.usecase.add_watchlist_usecase import AddWatchlistUseCase
 from app.domains.watchlist.application.usecase.get_watchlist_usecase import GetWatchlistUseCase
@@ -73,8 +74,24 @@ async def get_watchlist(
 
 
 @router.delete("/{item_id}", status_code=204)
-async def remove_watchlist(item_id: int, db: Session = Depends(get_db)):
+async def remove_watchlist(
+    item_id: int,
+    db: Session = Depends(get_db),
+    account_id: Optional[str] = Cookie(default=None),
+    user_token: Optional[str] = Cookie(default=None),
+):
+    aid = _resolve_account_id(account_id, user_token)
+    if aid is None:
+        raise HTTPException(status_code=401, detail="로그인이 필요합니다.")
+
+    orm = db.query(WatchlistItemORM).filter(WatchlistItemORM.id == item_id).first()
+    if orm is None:
+        raise HTTPException(status_code=404, detail="관심종목을 찾을 수 없습니다.")
+    if orm.account_id != aid:
+        raise HTTPException(status_code=403, detail="삭제 권한이 없습니다.")
+
     repository = WatchlistRepositoryImpl(db)
+
     usecase = RemoveWatchlistUseCase(repository)
     try:
         usecase.execute(item_id)

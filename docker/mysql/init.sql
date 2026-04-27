@@ -1,0 +1,3 @@
+CREATE DATABASE IF NOT EXISTS multi_agent_db;
+GRANT ALL PRIVILEGES ON multi_agent_db.* TO 'eddi'@'%';
+FLUSH PRIVILEGES;
