@@ -87,7 +87,8 @@ jobs:
             --env-file /home/ec2-user/alpha-terminal-ai-server/.env \
             --network alphadesk-network \
             --restart unless-stopped \
-            ghcr.io/${{ secrets.REPO_USER }}/alpha-terminal-api:latest
+            ghcr.io/${{ secrets.REPO_USER }}/alpha-terminal-api:latest \
+            python -m main
 
       - name: Health check
         run: |
